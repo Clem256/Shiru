@@ -1,13 +1,23 @@
-import { generalDefaults, historyDefaults, queryDefaults, notifyDefaults, isValidNumber } from './util.js'
+import { generalDefaults, historyDefaults, queryDefaults, notifyDefaults, isValidNumber, getRandomInt } from './util.js'
 import { writable } from 'simple-store-svelte'
 import equal from 'fast-deep-equal/es6'
 import rfdc from 'rfdc'
 import Debug from 'debug'
 const debug = Debug('ui:cache')
+const debugE = Debug('ui:eviction')
 const deepClone = rfdc({ proto: false, circles: false, ownProps: true })
 
+/** @type {Promise<IDBDatabase> | null} */
 let currentDB = null
+/** @type {number} */
 const version = 1
+
+/** @type {number} */
+const EVICTION_MAX_PER_RUN = 500
+/** @type {number} */
+const EVICTION_STARTUP_DELAY = 2 * 60 * 1_000
+/** @type {number} */
+const EVICTION_INTERVAL = 5 * 60 * 1_000
 
 /**
  * Map of user IDs to their corresponding batch writer instances.
@@ -26,19 +36,19 @@ const batchWriters = new Map()
 export const caches = Object.freeze({
   GENERAL: { key: 'general', database: true },
   QUERIES: { key: 'queries', database: true },
-  MAPPINGS: { key: 'mappings', database: true },
+  MAPPINGS: { key: 'mappings', database: true, expiryOffset: 120 * 24 * 60 * 60 * 1_000, maxEntries: 5_000 }, // evict after 120 days.
   USER_LISTS: { key: 'user_lists', database: true },
-  MEDIA_CACHE: { key: 'medias', database: true },
+  MEDIA_CACHE: { key: 'medias', database: true, expiryOffset: 120 * 24 * 60 * 60 * 1_000, maxEntries: 10_000 }, // evict after 120 days.
   HISTORY: { key: 'history', database: true },
   NOTIFICATIONS: { key: 'notifications', database: true },
-  COMPOUND: { key: 'compound' },
+  COMPOUND: { key: 'compound', expiryOffset: 7 * 24 * 60 * 60 * 1_000, maxEntries: 500 }, // evict after 7 days.
   EXTENSIONS: { key: 'extensions' },
-  EPISODES: { key: 'episodes' },
-  FOLLOWING: { key: 'following' },
-  RECOMMENDATIONS: { key: 'recommendations' },
-  SEARCH_IDS: { key: 'searchIDS' },
-  SEARCH: { key: 'search' },
-  RSS: { key: 'rss' }
+  EPISODES: { key: 'episodes', expiryOffset: 60 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 60 days.
+  FOLLOWING: { key: 'following', expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 2_000 }, // evict after 30 days.
+  RECOMMENDATIONS: { key: 'recommendations', expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 500 }, // evict after 30 days.
+  SEARCH_IDS: { key: 'searchIDS', expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
+  SEARCH: { key: 'search', expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
+  RSS: { key: 'rss', expiryOffset: 7 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 7 days.
 })
 
 /**
@@ -388,6 +398,8 @@ class Cache {
   #pending = new Map()
   /** @type {import('svelte/store').Writable<string>} */
   status
+  /** @type {import('svelte/store').Writable<any>} */
+  page
   /** @type {AnilistClient} */
   anilistClient
 
@@ -401,6 +413,232 @@ class Cache {
    */
   constructor() {
     this.isReady = this.#initialize()
+  }
+
+  /**
+   * Runs a full eviction pass across all configured caches, respecting the per-run deletion budget.
+   * Handles nested query stores, flat IDB caches, and the media cache separately.
+   *
+   * @param {Map<string, Object>} cacheMap
+   */
+  async #runEviction(cacheMap) {
+    const now = Date.now()
+    let totalPurged = 0
+    const purgedByCacheKey = {}
+    const evictableCaches = Object.values(caches).filter(cache => cache.expiryOffset)
+    debugE(`Pass started, evaluating ${evictableCaches.length} caches: ${evictableCaches.map(cache => cache.key).join(', ')}`)
+
+    // queries is nested: { [subKey]: { [entryKey]: { data, expiry, cachedAt } } }
+    // each subKey maps to a cache definition with its own expiryOffset and maxEntries
+    const queriesStore = cacheMap.get(caches.QUERIES.key)
+    const cachesByKey = Object.fromEntries(Object.values(caches).map(cache => [cache.key, cache]))
+    if (queriesStore) {
+      for (const [subKey, subStore] of Object.entries(queriesStore)) {
+        if (totalPurged >= EVICTION_MAX_PER_RUN) break
+        const subDefinition = cachesByKey[subKey]
+        if (!subDefinition?.expiryOffset) continue
+
+        const { expiryOffset, maxEntries } = subDefinition
+        const subEntries = Object.entries(subStore || {})
+        const budget = EVICTION_MAX_PER_RUN - totalPurged
+
+        const expired = Object.entries(queriesStore[subKey] || {}).filter(([, entry]) => entry && typeof entry === 'object' && entry.expiry != null && now > entry.expiry + expiryOffset).slice(0, budget).map(([key]) => key)
+        if (expired.length) {
+          for (const key of expired) delete queriesStore[subKey][key]
+          try {
+            await putMany(this.cacheID, caches.QUERIES, [[subKey, queriesStore[subKey]]])
+          } catch (error) {
+            debugE(`IDB update failed for queries:${subKey}:`, error)
+          }
+          this.queries.update(value => {
+            if (value[subKey]) {
+              for (const key of expired) delete value[subKey][key]
+            }
+            return value
+          })
+          cacheMap.set(caches.QUERIES.key, queriesStore)
+          totalPurged += expired.length
+          purgedByCacheKey[subKey] = (purgedByCacheKey[subKey] || 0) + expired.length
+          debugE(`Purged ${expired.length} expired entries from queries:${subKey}`)
+        } else {
+          debugE(`No expired entries for queries:${subKey} (${subEntries.length} total)`)
+        }
+
+        const remainingBudget = EVICTION_MAX_PER_RUN - totalPurged
+        if (remainingBudget <= 0) break
+
+        const currentEntries = Object.entries(queriesStore[subKey] || {})
+        if (currentEntries.length > maxEntries) {
+          const overflow = currentEntries.length - maxEntries
+          const toRemove = currentEntries.filter(([, entry]) => entry && typeof entry === 'object').sort(([, a], [, b]) => (a.cachedAt ?? 0) - (b.cachedAt ?? 0)).slice(0, Math.min(overflow, remainingBudget)).map(([key]) => key)
+
+          for (const key of toRemove) delete queriesStore[subKey][key]
+          try {
+            await putMany(this.cacheID, caches.QUERIES, [[subKey, queriesStore[subKey]]])
+          } catch (error) {
+            debugE(`IDB update failed for queries:${subKey}:`, error)
+          }
+          this.queries.update(value => {
+            if (value[subKey]) {
+              for (const key of toRemove) delete value[subKey][key]
+            }
+            return value
+          })
+          totalPurged += toRemove.length
+          purgedByCacheKey[subKey] = (purgedByCacheKey[subKey] || 0) + toRemove.length
+          debugE(`The queries:${subKey} cache overflowed by ${toRemove.length} entries, purged oldest (was ${currentEntries.length}, limit ${maxEntries})`)
+        }
+      }
+    }
+
+    // flat caches
+    for (const cacheDefinition of Object.values(cachesByKey)) {
+      if (!cacheDefinition.database || !cacheDefinition.expiryOffset) continue
+      if (cacheDefinition.key === caches.QUERIES.key || cacheDefinition.key === caches.MEDIA_CACHE.key) continue
+      if (totalPurged >= EVICTION_MAX_PER_RUN) break
+
+      const { key: cacheKey, expiryOffset, maxEntries } = cacheDefinition
+      const storeEntries = cacheMap.get(cacheKey)
+      if (!storeEntries) continue
+
+      const entries = Object.entries(storeEntries)
+      const budget = EVICTION_MAX_PER_RUN - totalPurged
+      const store = this[cacheKey]
+
+      const expired = Object.entries(storeEntries).filter(([, entry]) => entry && typeof entry === 'object' && entry.expiry != null && now > entry.expiry + expiryOffset).slice(0, budget).map(([key]) => key)
+      if (expired.length) {
+        for (const key of expired) delete storeEntries[key]
+        try {
+          await remove(this.cacheID, cacheDefinition, expired)
+        } catch (error) {
+          debugE(`IDB remove failed for ${cacheKey}:`, error)
+        }
+        if (store) store.update(value => {
+          for (const key of expired) delete value[key]
+          return value
+        })
+        cacheMap.set(cacheKey, storeEntries)
+        totalPurged += expired.length
+        purgedByCacheKey[cacheKey] = (purgedByCacheKey[cacheKey] || 0) + expired.length
+        debugE(`Purged ${expired.length} expired entries from ${cacheKey}`)
+      } else {
+        debugE(`No expired entries for ${cacheKey} (${entries.length} total)`)
+      }
+
+      const remainingBudget = EVICTION_MAX_PER_RUN - totalPurged
+      if (remainingBudget <= 0) break
+
+      const currentEntries = Object.entries(storeEntries)
+      if (currentEntries.length > maxEntries) {
+        const overflow = currentEntries.length - maxEntries
+        const toRemove = currentEntries.filter(([, entry]) => entry && typeof entry === 'object').sort(([, a], [, b]) => (a.cachedAt ?? 0) - (b.cachedAt ?? 0)).slice(0, Math.min(overflow, remainingBudget)).map(([key]) => key)
+
+        for (const key of toRemove) delete storeEntries[key]
+        try {
+          await remove(this.cacheID, cacheDefinition, toRemove)
+        } catch (error) {
+          debugE(`IDB remove failed for ${cacheKey}:`, error)
+        }
+        if (store) store.update(value => {
+          for (const key of toRemove) delete value[key]
+          return value
+        })
+        cacheMap.set(cacheKey, storeEntries)
+        totalPurged += toRemove.length
+        purgedByCacheKey[cacheKey] = (purgedByCacheKey[cacheKey] || 0) + toRemove.length
+        debugE(`The ${cacheKey} cache overflowed by ${toRemove.length} entries, purged oldest (was ${currentEntries.length}, limit ${maxEntries})`)
+      }
+    }
+
+    // media cache
+    if (totalPurged < EVICTION_MAX_PER_RUN && mediaCache) {
+      const { expiryOffset, maxEntries } = caches.MEDIA_CACHE
+      const mediaBudget = EVICTION_MAX_PER_RUN - totalPurged
+      const mediaEntries = Object.entries(mediaCache.value || {})
+      const toRemove = []
+
+      const expired = mediaEntries.filter(([, entry]) => entry?.expiry != null && now > entry.expiry + expiryOffset).slice(0, mediaBudget).map(([id]) => id)
+      if (expired.length) {
+        toRemove.push(...expired)
+        debugE(`Purged ${expired.length} expired entries from medias`)
+      }
+
+      if (toRemove.length < mediaBudget) {
+        const removedSet = new Set(toRemove)
+        const currentMediaEntries = mediaEntries.filter(([id]) => !removedSet.has(id))
+        if (currentMediaEntries.length > maxEntries) {
+          const overflow = currentMediaEntries.length - maxEntries
+          const oldest = currentMediaEntries.sort(([, a], [, b]) => (a?.cachedAt ?? 0) - (b?.cachedAt ?? 0)).slice(0, Math.min(overflow, mediaBudget - toRemove.length)).map(([key]) => key)
+          toRemove.push(...oldest)
+          debugE(`The medias cache overflowed by ${oldest.length} entries, purged oldest (was ${currentMediaEntries.length}, limit ${maxEntries})`)
+        }
+      }
+
+      if (toRemove.length) {
+        mediaCache.update(current => {
+          for (const key of toRemove) delete current[key]
+          return current
+        })
+        try {
+          await remove(this.cacheID, caches.MEDIA_CACHE, toRemove)
+        } catch (error) {
+          debugE('IDB remove failed for medias:', error)
+        }
+        totalPurged += toRemove.length
+        purgedByCacheKey['medias'] = (purgedByCacheKey['medias'] || 0) + toRemove.length
+      } else debugE(`No expired entries for medias (${mediaEntries.length} total)`)
+    }
+
+    if (totalPurged > 0) debugE(`Pass complete, total: ${totalPurged}, ${Object.entries(purgedByCacheKey).map(([cacheKey, purgeCount]) => `${cacheKey}:${purgeCount}`).join(', ')}`)
+    else debugE('Pass complete, nothing to purge')
+  }
+
+  /**
+   * Starts the eviction scheduler, deferring the first run by {@link EVICTION_STARTUP_DELAY}
+   * then repeating every {@link EVICTION_INTERVAL}. Skips runs while offline or while
+   * the player is fullscreen, retrying after 30 seconds instead.
+   *
+   * @param {Map<string, Object>} cacheMap
+   */
+  async #startEvictionScheduler(cacheMap) {
+    let running = false
+    let timeout = null
+    if (!this.status) {
+      const { status } = await import('@/modules/networking.js')
+      this.status = status
+    }
+    if (!this.page) {
+      const { page } = await import('@/modules/navigation.js')
+      this.page = page
+    }
+
+    /**
+     * Attempts a single eviction pass. Skips if one is already running or a retry is pending.
+     * If conditions aren't met (offline or fullscreen player), schedules a single retry in 30s.
+     */
+    const run = async () => {
+      if (running || timeout) return
+      if (this.status?.value?.match(/offline/i) || (this.page?.value === this.page?.PLAYER && document.fullscreenElement)) {
+        debugE('Skipping run, offline or player is fullscreen, retrying in 30s')
+        timeout = setTimeout(() => {
+          timeout = null
+          run()
+        }, 30_000)
+        timeout.unref?.()
+        return
+      }
+      running = true
+      await this.#runEviction(cacheMap)
+      running = false
+    }
+
+    const startup = setTimeout(() => {
+      run()
+      const interval = setInterval(run, EVICTION_INTERVAL)
+      interval.unref?.()
+    }, EVICTION_STARTUP_DELAY)
+
+    startup.unref?.()
   }
 
   /**
@@ -447,6 +685,27 @@ class Cache {
           } else debug(`No data could be recovered from ${key.key}, returning empty cache`)
           data = recovered
         }
+
+        if (key.key === caches.MEDIA_CACHE.key) {
+          const now = Date.now()
+          let needsUpdate = false
+          for (const [id, media] of Object.entries(data)) {
+            if (media && !media.cachedAt) {
+              data[id] = { ...media, cachedAt: now, expiry: media.status === 'FINISHED' ? now + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000 : now + getRandomInt(12, 24) * 60 * 60 * 1_000 }
+              needsUpdate = true
+            }
+          }
+          if (needsUpdate) {
+            debug(`Migrating media cache entries to include cachedAt and expiry...`)
+            try {
+              await putMany(this.cacheID, caches.MEDIA_CACHE, Object.entries(data))
+              debug(`Media cache migration complete`)
+            } catch (error) {
+              debug(`Failed to persist media cache migration, will use migrated data in-memory only:`, error)
+            }
+          }
+        }
+
         cacheMap.set(key.key, data)
       } catch (error) {
         debug(`Critical error loading ${key.key}, using empty cache:`, error)
@@ -458,21 +717,21 @@ class Cache {
     this.subscribers = cacheTypes.map(({ key }) => {
       const batchWriter = getBatchWriter(this.cacheID)
       return (key.key === caches.MEDIA_CACHE.key ? mediaCache : this[key.key]).subscribe(value => {
-        const inMem = cacheMap.get(key.key) || {}
+        const storeEntries = cacheMap.get(key.key) || {}
         for (const [subKey, subValue] of Object.entries(value || {})) {
-          const prevSubValue = inMem[subKey]
+          const prevSubValue = storeEntries[subKey]
           if (prevSubValue !== subValue && !equal(prevSubValue, subValue)) {
             batchWriter.enqueue(key, subKey, subValue)
-            inMem[subKey] = deepClone(subValue)
+            storeEntries[subKey] = deepClone(subValue)
           }
         }
-        for (const subKey of Object.keys(inMem)) {
+        for (const subKey of Object.keys(storeEntries)) {
           if (!(subKey in (value || {}))) {
-            delete inMem[subKey]
+            delete storeEntries[subKey]
             remove(this.cacheID, key, [subKey]).catch(error => debug(`Failed to remove ${subKey} from ${key}`, error))
           }
         }
-        cacheMap.set(key.key, inMem)
+        cacheMap.set(key.key, storeEntries)
         return () => {
           cacheMap.delete(key.key)
           debug('Unsubscribed from cache:', key.key)
@@ -480,6 +739,7 @@ class Cache {
       })
     })
 
+    this.#startEvictionScheduler(cacheMap)
     debug('Caches have successfully been loaded!')
   }
 
@@ -493,13 +753,13 @@ class Cache {
   destroy() {
     this.subscribers.forEach((unsubscribe) => unsubscribe())
     this.#pending.clear()
-    mediaCache = null
     this.general = null
     this.queries = null
     this.mappings = null
     this.user_lists = null
     this.notifications = null
     this.history = null
+    mediaCache = null
     debug(`Cache with ID ${this.cacheID} has been destroyed.`)
   }
 
@@ -537,7 +797,11 @@ class Cache {
     this.cacheID = newCacheID
     for (const value of [[caches.GENERAL, this.general.value], [caches.NOTIFICATIONS, this.notifications.value], [caches.HISTORY, this.history.value]]) {
       for (const [key, keyValue] of Object.entries(value[1])) {
-        await putMany(newCacheID, value[0], [[key, keyValue]])
+        try {
+          await putMany(newCacheID, value[0], [[key, keyValue]])
+        } catch (error) {
+          debug(`IDB update failed for ${newCacheID}:${key}:`, error)
+        }
       }
     }
   }
@@ -662,9 +926,10 @@ class Cache {
     if (!medias || !medias.length) return
     const filledMedias = fillLists ? fillEntries(medias, fillLists) : medias /* attaches any alternative authorization userList information to the anilist media for tracking. */
     const mediaMap = new Map(filledMedias.map(m => [m.id, m]))
+    const now = Date.now()
     mediaCache.update(current => {
       for (const [id, media] of mediaMap.entries()) {
-        if (media) current[id] = media
+        if (media) current[id] = { ...media, cachedAt: Date.now(), expiry: media.status === 'FINISHED' ? now + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000 : now + getRandomInt(12, 24) * 60 * 60 * 1_000 }
       }
       return current
     })
@@ -762,11 +1027,7 @@ class Cache {
         return this.cachedEntry(cache, key, true)
       }
       const cacheRes = deepClone(res)
-      if (!this.status) {
-        const { status } = await import('@/modules/networking.js')
-        this.status = status
-      }
-      if (this.status.value.match(/offline/i) || (!variables?.mappings && (!res || ((res.errors?.length > 0) && !res.errors?.[0]?.title?.match(/record not found/i))))) return this.cachedEntry(cache, key, true) || res
+      if (this.status?.value?.match(/offline/i) || (!variables?.mappings && (!res || ((res.errors?.length > 0) && !res.errors?.[0]?.title?.match(/record not found/i))))) return this.cachedEntry(cache, key, true) || res
       if (cache !== caches.RECOMMENDATIONS || this.general.value.settings.queryComplexity === 'Complex') {
         if (res?.data?.Page?.media) {
           cacheRes.data.Page.media = cacheRes.data.Page.media.map(media => media.id)
