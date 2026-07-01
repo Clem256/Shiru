@@ -83,7 +83,7 @@
   let isFullscreen = false
   let ended = false
   let gain = 0
-  let volume = Number(cache.getEntry(caches.GENERAL, 'volume')) || 1
+  let volume = $settings.volume || 1
   let volumeBoosted = false
   let volumeText = ''
   let volumeVisible = false
@@ -96,7 +96,7 @@
   let gainNode = null
   let playbackRate = 1
   let externalPlayerReady = false
-  $: cache.setEntry(caches.GENERAL, 'volume', String(volume || 0))
+  $: $settings.volume = (String(volume || 0))
   $: launchedExternal = false
   $: externalPlayback = ($settings.enableExternal || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath)
   $: safeduration = externalPlayback ? ((current?.media?.media?.duration || (current?.media?.media?.format && durationMap[current?.media?.media?.format]) || 24) * 60) : (isFinite(duration) ? duration : currentTime)

@@ -38,7 +38,7 @@ class MALDubs {
     async getMALDubs() {
         debug('Getting MyAnimeList Dubs IDs')
         try {
-            const cachedEntry = await cache.cachedEntry(caches.RSS, 'MALDubs', true)
+            const cachedEntry = await cache.cachedEntry(caches.QUERY_RSS, 'MALDubs', true)
             if (status.value === 'offline' && cachedEntry) return cachedEntry
             let res = {}
             try {
@@ -59,10 +59,10 @@ class MALDubs {
                         if (!cachedEntry) printError('Dub Caching Failed', 'Failed to load dub information!', error)
                     }
                 } else if (!cachedEntry) printError('Dub Caching Failed', 'Failed to load dub information!', res)
-            } else if (json) return await cache.cacheEntry(caches.RSS, 'MALDubs', { mappings: true }, json, Date.now() + getRandomInt(100, 200) * 60 * 1000)
+            } else if (json) return await cache.cacheEntry(caches.QUERY_RSS, 'MALDubs', { mappings: true }, json, Date.now() + getRandomInt(100, 200) * 60 * 1000)
             else throw res
         } catch (error) {
-            const cachedEntry = await cache.cachedEntry(caches.RSS, 'MALDubs', true)
+            const cachedEntry = await cache.cachedEntry(caches.QUERY_RSS, 'MALDubs', true)
             if (cachedEntry) {
                 debug(`Failed to request MALDubs RSS, this is likely due to an outage... falling back to cached data.`)
                 return cachedEntry

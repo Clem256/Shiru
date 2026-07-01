@@ -8,6 +8,7 @@ import { extensionManager } from '@/modules/extensions/manager.js'
 import { SUPPORTS } from '@/modules/support.js'
 import { TORRENT } from '@/modules/bridge.js'
 import AnimeResolver from '@/modules/anime/animeresolver.js'
+import { cache, caches } from '@/modules/cache.js'
 import Debug from 'debug'
 const debug = Debug('ui:extensions')
 
@@ -85,7 +86,8 @@ export async function getTorrentResults({ media, episode, batch, movie, resoluti
 async function queryExtensions(type, options, queryTypes, processResults) {
   await extensionManager.whenReady.promise
   const promises = new Map()
-  const allExtensionKeys = Object.keys(settings.value.sourcesNew || {})
+  const extensionSources = cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}
+  const allExtensionKeys = Object.keys(extensionSources)
   if (!allExtensionKeys.length) {
     debug(status.value !== 'offline' ? `No ${type} sources configured` : `Detected ${type} sources but they are inactive`)
     return new Map([
@@ -100,7 +102,7 @@ async function queryExtensions(type, options, queryTypes, processResults) {
   }
 
   for (const key of allExtensionKeys) {
-    const source = settings.value.sourcesNew[key]
+    const source = extensionSources[key]
     if ((source.type ?? 'torrent') === type && (!source?.nsfw || settings.value.adult !== 'none')) {
       const promise = (async () => {
         try {

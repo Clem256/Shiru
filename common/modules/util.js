@@ -1,5 +1,5 @@
 import { SUPPORTS } from '@/modules/support.js'
-import { writable, derived } from 'simple-store-svelte'
+import { writable } from 'simple-store-svelte'
 import { cubicOut, cubicIn } from 'svelte/easing'
 import levenshtein from 'js-levenshtein'
 import Fuse from 'fuse.js'
@@ -567,6 +567,7 @@ export function createListener(triggerClasses = []) {
 export const defaults = {
   volume: 1,
   uiScale: 1,
+  customCSS: '',
   presetTheme: 'default-dark',
   updateChannel: 'stable',
   updateVersion: undefined,
@@ -629,9 +630,7 @@ export const defaults = {
   w2g: false,
   font: undefined,
   angle: 'default',
-  sourcesNew: {},
   extensionsNew: {},
-  extensionSources: {},
   disableMiniplayer: false,
   autoHideMiniplayer: true,
   enableExternal: false,
@@ -665,10 +664,6 @@ export const defaults = {
 
 /**
  * @typedef {Object} GeneralDefaults
- * @property {string} theme
- * @property {number} volume
- * @property {string} posMiniplayer
- * @property {string} widthMiniplayer
  * @property {Array<any>} sync
  * @property {Array<any>} syncQueueAni
  * @property {Array<any>} syncQueueMal
@@ -677,12 +672,10 @@ export const defaults = {
  * @property {any} [stagingTorrents]
  * @property {any} [seedingTorrents]
  * @property {any} [completedTorrents]
+ * @property {string} posMiniplayer
+ * @property {string} widthMiniplayer
  */
 export const generalDefaults = {
-  theme: '',
-  volume: 1,
-  posMiniplayer: 'bottom right',
-  widthMiniplayer: '0px',
   sync: [],
   syncQueueAni: [],
   syncQueueMal: [],
@@ -690,7 +683,9 @@ export const generalDefaults = {
   loadedTorrent: undefined,
   stagingTorrents: [],
   seedingTorrents: [],
-  completedTorrents: []
+  completedTorrents: [],
+  posMiniplayer: 'bottom right',
+  widthMiniplayer: '0px'
 }
 
 /**
@@ -711,30 +706,6 @@ export const historyDefaults = {
   lastSchedule: undefined,
   animeResolvedHash: [],
   animeEpisodeProgress: []
-}
-
-/**
- * @typedef {Object} QueryDefaults
- * @property {Record<string, any>} recommendations
- * @property {Record<string, any>} notifications
- * @property {Record<string, any>} following
- * @property {Record<string, any>} episodes
- * @property {Record<string, any>} search
- * @property {Record<string, any>} searchIDS
- * @property {Record<string, any>} compound
- * @property {Record<string, any>} extensions
- * @property {Record<string, any>} rss
- */
-export const queryDefaults = {
-  recommendations: {},
-  notifications: {},
-  following: {},
-  episodes: {},
-  search: {},
-  searchIDS: {},
-  compound: {},
-  extensions: {},
-  rss: {}
 }
 
 /**

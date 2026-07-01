@@ -1,6 +1,5 @@
 import { append, element } from 'svelte/internal'
 import { writable } from 'simple-store-svelte'
-import { cache, caches } from '@/modules/cache.js'
 import { settings } from '@/modules/settings.js'
 import { SUPPORTS } from '@/modules/support.js'
 import { ANDROID } from '@/modules/bridge.js'
@@ -9,15 +8,15 @@ const style = element('style')
 style.id = 'customThemes'
 append(document.head, style)
 
-export const variables = writable(cache.getEntry(caches.GENERAL, 'theme') || '')
+export const variables = writable(settings.value.customCSS || '')
 
 variables.subscribe(value => {
-  cache.setEntry(caches.GENERAL, 'theme', value)
   setScale()
   setStyle(value)
 })
 
 export function setStyle(value) {
+  settings.value.customCSS = value
   document.documentElement.setAttribute('data-theme', settings.value.presetTheme)
   document.querySelector('meta[name="theme-color"]').setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--theme-color').trim())
   style.textContent = `:root[data-theme='${settings.value.presetTheme}']{${(value || variables.value).replace(/{|}/g, '')}}`

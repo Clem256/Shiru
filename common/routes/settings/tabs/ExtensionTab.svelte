@@ -4,6 +4,7 @@
   import ConfirmButton from '@/components/inputs/ConfirmButton.svelte'
   import { stringToHex, capitalize, debounce } from '@/modules/util.js'
   import { extensionManager } from '@/modules/extensions/manager.js'
+  import { cache, caches } from '@/modules/cache.js'
   import { status } from '@/modules/networking.js'
   import { slide } from 'svelte/transition'
   import { marked } from 'marked'
@@ -19,7 +20,8 @@
   $: viewSettings = {}
   $: pendingSource = false
   $: failedSource = null
-  $: availableSources = settings.extensionSources
+  $: availableSources = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources')) || {}
+  $: availableExtensions = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources')) || {}
 
   let sourceUrl = ''
   async function addSource(source) {
@@ -27,6 +29,7 @@
     pendingSource = true
     failedSource = await extensionManager.addSource(source || sourceUrl)
     sourceUrl = ''
+    updateAvailable()
     pendingSource = false
   }
 
@@ -35,13 +38,17 @@
     pendingSource = true
     if (!extensionSource) await extensionManager.removeSource(sourceUrl)
     else {
-      const newSources = {}
-      for (const [key, value] of Object.entries(settings.extensionSources)) {
-        if (key !== sourceUrl) newSources[key] = value
-      }
-      settings.extensionSources = newSources
+      const repositorySources = { ...(availableSources) }
+      delete repositorySources[sourceUrl]
+      cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', repositorySources)
     }
+    updateAvailable()
     pendingSource = false
+  }
+
+  function updateAvailable() {
+    availableSources = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources')) || {}
+    availableExtensions = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources')) || {}
   }
 
   function parseSafeMarkdown(text) {
@@ -169,7 +176,7 @@
 {#if mainTab}
   <div class='wm-1200 w-full'>
     <div class='w-full d-flex flex-column mb-10'>
-      {#if !Object.values(settings.sourcesNew)?.length}
+      {#if !Object.values(availableExtensions)?.length}
         <div class='card m-0 p-15 mb-10 solid-border bg-error'>
           <div class='d-flex'>
             <TriangleAlert size='4.3rem' />
@@ -180,7 +187,7 @@
           </div>
         </div>
       {:else}
-        {#each Object.values(settings.sourcesNew).sort((a, b) => (settings.extensionsNew[(b?.locale || ([b?.update].flat()[0] + '/')) + b?.id]?.enabled ? 1 : 0) - (settings.extensionsNew[(a?.locale || ([a?.update].flat()[0] + '/')) + a?.id]?.enabled ? 1 : 0)) as extension ((extension?.locale || ([extension?.update].flat()[0] + '/')) + extension?.id)}
+        {#each Object.values(availableExtensions).sort((a, b) => (settings.extensionsNew[(b?.locale || ([b?.update].flat()[0]) + '/') + b?.id]?.enabled ? 1 : 0) - (settings.extensionsNew[(a?.locale || ([a?.update].flat()[0]) + '/') + a?.id]?.enabled ? 1 : 0)) as extension ((extension?.locale || ([extension?.update].flat()[0]) + '/') + extension?.id)}
           {#if !extension?.nsfw || (settings.adult !== 'none')}
             {@const key = (extension?.locale || ([extension?.update].flat()[0] + '/')) + extension?.id}
             {@const enabled = settings.extensionsNew[key]?.enabled}
@@ -218,10 +225,11 @@
                       {#if settings.extensionsNew[key]}
                         <div class='custom-switch fit-content'>
                           <input type='checkbox' id={`extension-${key}`} bind:checked={settings.extensionsNew[key].enabled}
-                            on:change={event => {
+                            on:change={ async (event) => {
                               viewSettings = {}
-                              if (event.target.checked) extensionManager.enableExtension(key)
-                              else extensionManager.disableExtension(key)
+                              if (event.target.checked) await extensionManager.enableExtension(key)
+                              else await extensionManager.disableExtension(key)
+                              updateAvailable()
                             }}
                           />
                           <label for={`extension-${key}`}><br/></label>
@@ -361,8 +369,8 @@
     <button class='ml-10 btn btn-primary d-flex align-items-center justify-content-center rounded-2 w-200 h-43 font-scale-16' disabled={pendingSource || !sourceUrl?.length} class:cursor-wait={pendingSource} type='button' use:click={() => addSource()}><SquarePlus class='mr-10' size='1.8rem' /><span>Add Source</span></button>
   </div>
   <div class='wm-1200'>
-    {#if Object.values(settings.sourcesNew)?.length}
-      {#each Object.entries(Object.values(settings.sourcesNew).reduce((a, { update, locale }) => { if (!a[[update].flat()[0]]) a[[update].flat()[0]] = { count: 0, locale }; a[[update].flat()[0]].count += 1; return a }, {})).map(([host, { count, locale }]) => ({ host, count, locale })) as extension}
+    {#if Object.values(availableExtensions)?.length}
+      {#each Object.entries(Object.values(availableExtensions).reduce((a, { update, locale }) => { if (!a[[update].flat()[0]]) a[[update].flat()[0]] = { count: 0, locale }; a[[update].flat()[0]].count += 1; return a }, {})).map(([host, { count, locale }]) => ({ host, count, locale })) as extension}
         <div class='d-flex align-items-center bg-dark-light border rounded-2 p-10 mb-10' style='border-color: {stringToHex(extension?.locale || extension?.host)} !important'>
           <div class='d-flex align-items-center ml-10'>
             {#if extension?.locale}
@@ -408,7 +416,7 @@
     </div>
   {/if}
   {#if availableSources && Object.keys(availableSources)?.length}
-    {@const missingSources = Object.values(availableSources).flat().filter(entry => !Object.values(settings.sourcesNew).some(existing => [entry.main].flat().includes([existing.update].flat()[0]))).map(entry => [entry.main].flat()[0])}
+    {@const missingSources = Object.values(availableSources).flat().filter(entry => !Object.values(availableExtensions).some(existing => [entry.main].flat().includes([existing.update].flat()[0]))).map(entry => [entry.main].flat()[0])}
     {#if missingSources.length}
       <div class='wm-1200'>
         <button type='button' class='btn w-full h-full p-5 rounded-2 d-flex align-items-center long-button' class:bg-dark-light={!viewSources} class:bg-primary={viewSources} use:click={() => { viewSources = !viewSources }}>

@@ -96,7 +96,7 @@ class Episodes {
 
     async requestEpisodes(jikan, id, episode, root) {
         const page = Math.ceil(episode / 100)
-        const cachedEntry = cache.cachedEntry(caches.EPISODES, `${id}:${page}:${root}`, status.value === 'offline')
+        const cachedEntry = cache.cachedEntry(caches.QUERY_EPISODES, `${id}:${page}:${root}`, status.value === 'offline')
         if (cachedEntry) return cachedEntry
         else if (status.value === 'offline') return
         if (this.concurrentRequests.has(`${id}:${page}:${root}`)) return this.concurrentRequests.get(`${id}:${page}:${root}`)
@@ -127,11 +127,11 @@ class Episodes {
                     this.checkError(res, `${jikan ? 'jikan' : 'kitsu'}`)
                 }
             }
-            return cache.cacheEntry(caches.EPISODES, `${id}:${page}:${root}`, {}, json, Date.now() + getRandomInt(1, 3) * 24 * 60 * 60 * 1000)
+            return cache.cacheEntry(caches.QUERY_EPISODES, `${id}:${page}:${root}`, {}, json, Date.now() + getRandomInt(1, 3) * 24 * 60 * 60 * 1000)
         })().catch((error) => {
             if (status.value === 'offline') {
                 debug(`Network offline, returning cached episode data if available`, error)
-                const cachedEntry = cache.cachedEntry(caches.EPISODES, `${id}:${page}:${root}`, true)
+                const cachedEntry = cache.cachedEntry(caches.QUERY_EPISODES, `${id}:${page}:${root}`, true)
                 if (cachedEntry) return cachedEntry
             } else throw new Error(error)
         }).finally(() => {

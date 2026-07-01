@@ -913,7 +913,7 @@ export async function isSubbedProgress(media) {
 const concurrentRequests = new Map()
 export async function getKitsuMappings(anilistID) {
   if (!anilistID) return
-  const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `kitsu-${anilistID}`, status.value === 'offline')
+  const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, `kitsu-${anilistID}`, status.value === 'offline')
   if (cachedEntry) return cachedEntry
   else if (status.value === 'offline') return
   if (concurrentRequests.has(`kitsu-${anilistID}`)) return concurrentRequests.get(`kitsu-${anilistID}`)
@@ -946,9 +946,9 @@ export async function getKitsuMappings(anilistID) {
       const date = new Date()
       const media = cache.getMedia(anilistID)
       const cacheDuration = media?.status === 'FINISHED' && media?.endDate && (date.getFullYear() - media.endDate.year) * 12 + (date.getMonth() + 1 - media.endDate.month) > 12 ? getRandomInt(24, 48) * 60 * 60 * 1_000 : getRandomInt(30, 60) * 60 * 1_000
-      return cache.cacheEntry(caches.MAPPINGS, `kitsu-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 30 to 60 minutes, or 24 to 48 hours for series that finished at least a year ago (its highly unlikely the mappings will change drastically at that point).
+      return cache.cacheEntry(caches.QUERY_MAPPINGS, `kitsu-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 30 to 60 minutes, or 24 to 48 hours for series that finished at least a year ago (its highly unlikely the mappings will change drastically at that point).
     } catch (e) {
-      const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `kitsu-${anilistID}`, true)
+      const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, `kitsu-${anilistID}`, true)
       if (cachedEntry) {
         debug(`Failed to request Kitsu Mappings for ${anilistID}, this is likely due to an outage... falling back to cached data.`)
         return cachedEntry
@@ -984,7 +984,7 @@ aniLimiter.on('failed', async (error) => {
 
 export async function getAniMappings(anilistID) {
   if (!anilistID) return
-  const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `ani-${anilistID}`, status.value === 'offline')
+  const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, `ani-${anilistID}`, status.value === 'offline')
   if (cachedEntry) return cachedEntry
   else if (status.value === 'offline') return
   if (concurrentRequests.has(`ani-${anilistID}`)) return concurrentRequests.get(`ani-${anilistID}`)
@@ -1018,9 +1018,9 @@ export async function getAniMappings(anilistID) {
       const date = new Date()
       const media = cache.getMedia(anilistID)
       const cacheDuration = media?.status === 'FINISHED' && media?.endDate && (date.getFullYear() - media.endDate.year) * 12 + (date.getMonth() + 1 - media.endDate.month) >= 12 ? getRandomInt(24, 48) * 60 * 60 * 1_000 : getRandomInt(30, 60) * 60 * 1_000
-      return cache.cacheEntry(caches.MAPPINGS, `ani-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 30 to 60 minutes, or 24 to 48 hours for series that finished at least a year ago (its highly unlikely the mappings will change drastically at that point).
+      return cache.cacheEntry(caches.QUERY_MAPPINGS, `ani-${anilistID}`, {}, json, date.getTime() + cacheDuration) // caches currently airing series for 30 to 60 minutes, or 24 to 48 hours for series that finished at least a year ago (its highly unlikely the mappings will change drastically at that point).
     } catch (e) {
-      const cachedEntry = cache.cachedEntry(caches.MAPPINGS, `ani-${anilistID}`, true)
+      const cachedEntry = cache.cachedEntry(caches.QUERY_MAPPINGS, `ani-${anilistID}`, true)
       if (cachedEntry) {
         debug(`Failed to request Anilist Mappings for ${anilistID}, this is likely due to an outage... falling back to cached data.`)
         return cachedEntry

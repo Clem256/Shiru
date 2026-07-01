@@ -91,7 +91,7 @@ class RSSMediaManager {
     try {
       content = await getRSSContent(url)
     } catch (e) {
-      const cachedEntry = await cache.cachedEntry(caches.RSS, `${btoa(url)}`, true)
+      const cachedEntry = await cache.cachedEntry(caches.QUERY_RSS, `${btoa(url)}`, true)
       if (cachedEntry) {
         debug(`Failed to request RSS feed for ${url}, this is likely due to an outage... falling back to cached data.`)
         content = DOMPARSER(cachedEntry, 'text/xml')
@@ -104,7 +104,7 @@ class RSSMediaManager {
     const pullDate = +(new Date(content.querySelector('pubDate').textContent))
     if (!ignoreChanged && this.resultMap[url]?.date === pubDate) return false
 
-    cache.cacheEntry(caches.RSS, `${btoa(url)}`, { mappings: true }, new XMLSerializer().serializeToString(content), Date.now() + getRandomInt(10, 15) * 60 * 1000)
+    cache.cacheEntry(caches.QUERY_RSS, `${btoa(url)}`, { mappings: true }, new XMLSerializer().serializeToString(content), Date.now() + getRandomInt(10, 15) * 60 * 1000)
     return { content, pubDate, pullDate }
   }
 

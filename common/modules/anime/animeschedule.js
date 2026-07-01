@@ -32,8 +32,8 @@ class AnimeSchedule {
     hentaiAiredListsCache = writable({})
 
     constructor() {
-        this.lastUpdated.value = cache.cachedEntry(caches.RSS, 'anischedule-manifest', true)?.then(value => value || {}) || {}
-        this.lastUpdated.subscribe(lastUpdated => cache.cacheEntry(caches.RSS, 'anischedule-manifest', { mappings: true }, lastUpdated, Date.now() + 315_000))
+        this.lastUpdated.value = cache.cachedEntry(caches.QUERY_RSS, 'anischedule-manifest', true)?.then(value => value || {}) || {}
+        this.lastUpdated.subscribe(lastUpdated => cache.cacheEntry(caches.QUERY_RSS, 'anischedule-manifest', { mappings: true }, lastUpdated, Date.now() + 315_000))
 
         this.subAiringLists.value = this.feedFromManifest('sub', true)
         this.dubAiringLists.value = this.feedFromManifest('dub', true)
@@ -232,7 +232,7 @@ class AnimeSchedule {
     async feedFromManifest(type, schedule = false) {
       const manifest = await this.manifestChanged()
       const feed = `${type.toLowerCase()}${!schedule ? '-episode-feed' : '-schedule'}`
-      const cachedSchedule = await cache.cachedEntry(caches.RSS, `${feed}`, true)
+      const cachedSchedule = await cache.cachedEntry(caches.QUERY_RSS, `${feed}`, true)
       if (!cachedSchedule || manifest.force || (manifest.changed && (manifest.previousManifest?.[type === 'sub' ? 'subbed' : type === 'dub' ? 'dubbed' : 'hentai']?.[schedule ? 'schedule' : 'episodes'] !== manifest.currentManifest?.[type === 'sub' ? 'subbed' : type === 'dub' ? 'dubbed' : 'hentai']?.[schedule ? 'schedule' : 'episodes']))) {
         return this.feedChanged(type, schedule, false, manifest)
       }
@@ -276,7 +276,7 @@ class AnimeSchedule {
         try {
             content = await this.getFeed(`${feed}`)
         } catch (error) {
-            const cachedEntry = await cache.cachedEntry(caches.RSS, `${feed}`, true)
+            const cachedEntry = await cache.cachedEntry(caches.QUERY_RSS, `${feed}`, true)
             if (cachedEntry) {
                 debug(`Failed to request RSS schedule for ${feed}, this is likely due to an outage... falling back to cached data.`)
                 content = cachedEntry
@@ -286,7 +286,7 @@ class AnimeSchedule {
         const res = !schedule && updateStore ? await this[`${type.toLowerCase()}AiredLists`].value : null
         if (!res || JSON.stringify(content) !== JSON.stringify(res)) {
             if (!schedule && updateStore) this[`${type.toLowerCase()}AiredLists`].value = content
-            cache.cacheEntry(caches.RSS, `${feed}`, { mappings: true }, content, Date.now() + 315_000)
+            cache.cacheEntry(caches.QUERY_RSS, `${feed}`, { mappings: true }, content, Date.now() + 315_000)
             if (manifest?.currentManifest) {
                 const feedKey = type === 'sub' ? 'subbed' : type === 'dub' ? 'dubbed' : 'hentai'
                 const dataKey = schedule ? 'schedule' : 'episodes'
