@@ -179,6 +179,8 @@ async function getExtension(name, urls) {
 class ExtensionManager {
   /** @type {Map<string, Promise<any>>} */
   pending = new Map()
+  /** @type {Map<string, Worker>} */
+  #pendingWorkers = new Map()
   /** @type {import('simple-store-svelte').Writable<Record<string, import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>>>} */
   activeWorkers = writable({})
   /** @type {import('simple-store-svelte').Writable<Record<string, import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>>>} */
@@ -214,20 +216,32 @@ class ExtensionManager {
     status.subscribe(async value => {
       if (_status === 'offline' && value === 'online') {
         const tasks = Object.entries(this.inactiveWorkers.value).map(async ([key, worker]) => {
-          if (this.activeWorkers.value[key] || !settings.value.extensionsNew[key]?.enabled) return
-          try {
-            if (!(await worker.validate())) throw new Error('The content source appears to be unreachable.')
-            this.activeWorkers.update(value => ({
-              ...value,
-              [key]: worker
-            }))
+          if (this.activeWorkers.value[key] || this.#pendingWorkers.has(key)) return
+          if (!settings.value.extensionsNew[key]?.enabled) {
+            debug(`Extension ${key} was disabled during network change, terminating...`)
+            worker.terminate()
             this.inactiveWorkers.update(value => {
               const { [key]: _, ...rest } = value
               return rest
             })
+            return
+          }
+          this.#pendingWorkers.set(key, worker)
+          try {
+            this.inactiveWorkers.update(value => {
+              const { [key]: _, ...rest } = value
+              return rest
+            })
+            if (!(await worker.validate())) throw new Error('The content source appears to be unreachable.')
+            if (this.#pendingWorkers.get(key) !== worker) return
+            this.activeWorkers.update(value => ({ ...value, [key]: worker }))
           } catch (error) {
-            if (this.inactiveWorkers.value[key]) worker.terminate()
+            if (this.#pendingWorkers.get(key) === worker) {
+              this.inactiveWorkers.update(value => ({ ...value, [key]: worker }))
+            }
             await printError(`Failed to load extension ${key}`, 'Validation has failed', error)
+          } finally {
+            this.#pendingWorkers.delete(key)
           }
         })
         await Promise.all(tasks)
@@ -247,6 +261,7 @@ class ExtensionManager {
     const inactiveWorker = this.inactiveWorkers.value[key]
     if (!inactiveWorker) return
     try {
+      this.#pendingWorkers.set(key, inactiveWorker)
       this.inactiveWorkers.update(value => {
         const { [key]: _, ...rest } = value
         return rest
@@ -259,23 +274,20 @@ class ExtensionManager {
         validated = false
         validationError = err
       }
+      if (!this.#pendingWorkers.has(key)) return
       if (!validated && (await inactiveWorker.hasBadModule())) {
         await this.getExtensionCode(key, inactiveWorker)
         if (this.activeWorkers.value[key]) return
       }
       if (!validated) throw validationError || new Error('The content source appears to be unreachable.')
-      this.activeWorkers.update(value => ({
-        ...value,
-        [key]: inactiveWorker
-      }))
+      this.activeWorkers.update(value => ({ ...value, [key]: inactiveWorker }))
     } catch (error) {
       if (!this.activeWorkers.value[key]) {
-        this.inactiveWorkers.update(value => ({
-          ...value,
-          [key]: inactiveWorker
-        }))
+        this.inactiveWorkers.update(value => ({ ...value, [key]: inactiveWorker }))
       }
       await printError(`Failed to load extension ${key}`, 'Validation has failed', error)
+    } finally {
+      this.#pendingWorkers.delete(key)
     }
   }
 
@@ -295,22 +307,22 @@ class ExtensionManager {
       if (!extension.locale) {
         await cache.cacheEntry(caches.QUERY_EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
         try {
+          if (this.#pendingWorkers.get(key) !== worker && this.activeWorkers.value[key] !== worker && this.inactiveWorkers.value[key] !== worker) return
           const initialize = await worker.initialize(key, extension.type, newCode, { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })
+          if (!settings.value.extensionsNew[key]?.enabled) {
+            debug(`Extension ${key} was disabled during code fetch, terminating...`)
+            worker.terminate()
+            return
+          }
           if (!initialize.validated) {
-            this.inactiveWorkers.update(value => ({
-              ...value,
-              [key]: worker
-            }))
+            this.inactiveWorkers.update(value => ({ ...value, [key]: worker }))
             throw new Error(initialize.error)
           }
         } catch (error) {
           if (!this.inactiveWorkers.value[key]) worker.terminate()
           throw new Error(error)
         }
-        this.activeWorkers.update(value => ({
-          ...value,
-          [key]: worker
-        }))
+        this.activeWorkers.update(value => ({ ...value, [key]: worker }))
       }
     }
   }
@@ -319,6 +331,8 @@ class ExtensionManager {
   reloadExtensions() {
     Object.values(this.activeWorkers.value).forEach(worker => worker.terminate())
     Object.values(this.inactiveWorkers.value).forEach(worker => worker.terminate())
+    this.#pendingWorkers.forEach(worker => worker.terminate())
+    this.#pendingWorkers.clear()
     this.activeWorkers.set({})
     this.inactiveWorkers.set({})
     this.whenReady = createDeferred()
@@ -332,6 +346,10 @@ class ExtensionManager {
    * @param {string} key The extension key.
    */
   disableExtension(key) {
+    if (this.#pendingWorkers.has(key)) {
+      this.#pendingWorkers.get(key).terminate()
+      this.#pendingWorkers.delete(key)
+    }
     if (this.activeWorkers.value[key]) {
       this.activeWorkers.value[key].terminate()
       this.activeWorkers.update(value => {
@@ -556,16 +574,19 @@ class ExtensionManager {
             try {
               /** @type {comlink.Remote<import('@/modules/extensions/worker.js').Worker>} */
               const remoteWorker = await wrap(worker)
+              this.#pendingWorkers.set(key, remoteWorker)
               const initialize = await remoteWorker.initialize(key, extension.type, modules[key], { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })
+              if (!settings.value.extensionsNew[key]?.enabled) {
+                debug(`Extension ${key} was disabled during initialization, terminating...`)
+                remoteWorker.terminate()
+                return
+              }
               if (!initialize.validated && initialize.stub) {
                 await this.getExtensionCode(key, remoteWorker)
-                if (this.activeWorkers.value[key]) return
+                if (this.activeWorkers.value[key] || !settings.value.extensionsNew[key]?.enabled) return
               }
               if (!initialize.validated) {
-                this.inactiveWorkers.update(value => ({
-                  ...value,
-                  [key]: remoteWorker
-                }))
+                this.inactiveWorkers.update(value => ({ ...value, [key]: remoteWorker }))
                 throw new Error(initialize.error)
               }
               if (this.activeWorkers.value[key]) {
@@ -581,16 +602,15 @@ class ExtensionManager {
                   return rest
                 })
               }
-              this.activeWorkers.update(value => ({
-                ...value,
-                [key]: remoteWorker
-              }))
+              this.activeWorkers.update(value => ({ ...value, [key]: remoteWorker }))
             } catch (error) {
               if (!this.inactiveWorkers.value[key]) worker.terminate()
               throw new Error(error)
             }
           } catch (error) {
             await printError(`Failed to load extension ${key}`, 'Initialization has failed', error)
+          } finally {
+            this.#pendingWorkers.delete(key)
           }
         }
       })()
@@ -675,9 +695,20 @@ class ExtensionManager {
         debug(`Found ${toUpdate.length} extensions to update:`, toUpdate.map(update => update.oldId))
         toUpdate.forEach(({ oldId }) => {
           try {
+            if (this.#pendingWorkers.has(oldId)) {
+              this.#pendingWorkers.get(oldId).terminate()
+              this.#pendingWorkers.delete(oldId)
+            }
             if (this.activeWorkers.value[oldId]) {
               this.activeWorkers.value[oldId].terminate()
               this.activeWorkers.update(value => {
+                const { [oldId]: _, ...rest } = value
+                return rest
+              })
+            }
+            if (this.inactiveWorkers.value[oldId]) {
+              this.inactiveWorkers.value[oldId].terminate()
+              this.inactiveWorkers.update(value => {
                 const { [oldId]: _, ...rest } = value
                 return rest
               })

@@ -22,6 +22,18 @@ class Worker {
   module
   type
   cache = new Map()
+  #abortController = new AbortController()
+
+  /**
+   * Creates a promise that rejects once the worker is terminated.
+   */
+  #terminated() {
+    const { signal } = this.#abortController
+    return new Promise((_, reject) => {
+      if (signal.aborted) return reject(new Error(`Worker ${this.id} was terminated`))
+      signal.addEventListener('abort', () => reject(new Error(`Worker ${this.id} was terminated`)), { once: true })
+    })
+  }
 
   /**
    * Load and validate the source from code
@@ -37,25 +49,25 @@ class Worker {
     this.module = module
     try {
       let source
-      if (id.startsWith('extension:')) source = (await import(/* webpackIgnore: true */ module)).default
+      if (id.startsWith('extension:')) source = (await Promise.race([import(/* webpackIgnore: true */ module), this.#terminated()])).default
       else {
         const blob = new Blob([module], { type: 'application/javascript' })
         const blobUrl = URL.createObjectURL(blob)
-        source = (await import(/* webpackIgnore: true */ blobUrl)).default
+        source = (await Promise.race([import(/* webpackIgnore: true */ blobUrl), this.#terminated()])).default
       }
-      source.anitomyscript = (await import('anitomyscript')).default
+      source.anitomyscript = (await Promise.race([import('anitomyscript'), this.#terminated()])).default
       if (Object.keys(opts.settings ?? {}).length) source.settings = opts.settings
       this.id = id
       this.source = source
 
       let validated = false
       if (opts.bypassCORS) {
-        try { validated = await this.source.validate() } catch {}
+        try { validated = await Promise.race([this.source.validate(), this.#terminated()]) } catch {}
         if (!validated) {
           globalThis.fetch = createBridge() // hacky Android workaround for Access-Control-Allow-Origin error.
-          validated = await this.source.validate()
+          validated = await Promise.race([this.source.validate(), this.#terminated()])
         }
-      } else validated = await this.source.validate()
+      } else validated = await Promise.race([this.source.validate(), this.#terminated()])
       if (!validated) return { error: 'The content source appears to be unreachable.' }
 
       return { validated: true }
@@ -108,7 +120,7 @@ class Worker {
     /** @type {Result[]} */
     const results = []
     const errors = []
-    for (const res of await Promise.all(promises)) {
+    for (const res of await Promise.race([Promise.all(promises), this.#terminated()])) {
       results.push(...res.results)
       errors.push(...res.errors)
     }
@@ -133,7 +145,7 @@ class Worker {
 
     const results = []
     const errors = []
-    for (const result of await Promise.allSettled(promises)) {
+    for (const result of await Promise.race([Promise.allSettled(promises), this.#terminated()])) {
       if (result.status === 'fulfilled') {
         results.push(...result.value)
       } else {
@@ -146,10 +158,11 @@ class Worker {
   }
 
   async validate() {
-    return !!(await this.source.validate())
+    return !!(await Promise.race([this.source.validate(), this.#terminated()]))
   }
 
   terminate() {
+    this.#abortController.abort()
     self.close()
   }
 }
