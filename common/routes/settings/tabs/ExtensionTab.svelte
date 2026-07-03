@@ -3,7 +3,7 @@
   import SettingCard from '@/routes/settings/components/SettingCard.svelte'
   import ConfirmButton from '@/components/inputs/ConfirmButton.svelte'
   import { stringToHex, capitalize, debounce } from '@/modules/util.js'
-  import { extensionManager } from '@/modules/extensions/manager.js'
+  import { getKey, normalizeUrl, VALID_SCHEMES, extensionManager } from '@/modules/extensions/manager.js'
   import { cache, caches } from '@/modules/cache.js'
   import { status } from '@/modules/networking.js'
   import { slide } from 'svelte/transition'
@@ -12,6 +12,8 @@
   import { TriangleAlert, CircleAlert, Github, Folder, FileQuestion, Trash2, CircleX, ChevronDown, ChevronUp, SquarePlus, Adult, Settings } from 'lucide-svelte'
   export let settings
 
+  const activeWorkers = extensionManager.activeWorkers
+  const inactiveWorkers = extensionManager.inactiveWorkers
   const updateExtensionSettings = debounce((key) => extensionManager.updateExtensionSettings(key), 500)
   const npmIcon = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcBAMAAACAI8KnAAAALVBMVEXLAADKAADMERHVSkrURkb////eeXnghITfgIDstrbFAADJAADhiorPJCTVSUliGH6+AAAAUklEQVR4AWMgETAKQoEAmKvsAgVGYEnTUCgIFmBgYmAQgOtiAHERACdXSNkBmevi/AGZyxrwAU3v4OJ+gLACGP7DA8dZgOGeixEi6ECUAIlhDgBoOA7wXH0RDQAAAABJRU5ErkJggg=='
 
@@ -187,14 +189,14 @@
           </div>
         </div>
       {:else}
-        {#each Object.values(availableExtensions).sort((a, b) => (settings.extensionsNew[(b?.locale || ([b?.update].flat()[0]) + '/') + b?.id]?.enabled ? 1 : 0) - (settings.extensionsNew[(a?.locale || ([a?.update].flat()[0]) + '/') + a?.id]?.enabled ? 1 : 0)) as extension ((extension?.locale || ([extension?.update].flat()[0]) + '/') + extension?.id)}
+        {#each Object.values(availableExtensions).sort((a, b) => (settings.extensionsNew[getKey(b)]?.enabled ? 1 : 0) - (settings.extensionsNew[getKey(a)]?.enabled ? 1 : 0)) as extension (getKey(extension))}
           {#if !extension?.nsfw || (settings.adult !== 'none')}
-            {@const key = (extension?.locale || ([extension?.update].flat()[0] + '/')) + extension?.id}
+            {@const key = getKey(extension)}
             {@const enabled = settings.extensionsNew[key]?.enabled}
-            {@const isActive = extensionManager.isActive(key)}
-            {@const isInactive = $status !== 'offline' && extensionManager.isInactive(key)}
+            {@const isActive = $activeWorkers[key]}
+            {@const isInactive = $status !== 'offline' && $inactiveWorkers[key]}
             {@const extensionName = `${(extension?.name || extension?.id).slice(0, 25)}${extension?.name?.length > 25 ? '...' : ''}`}
-            <div class='card m-0 p-15 mb-10 bg-dark-light border position-relative' style='border-color: {stringToHex(extension?.locale || [extension?.update].flat()[0])} !important' class:extension-disabled={!settings.extensionsNew[key]?.enabled} class:extension-error={isInactive}>
+            <div class='card m-0 p-15 mb-10 bg-dark-light border position-relative' style='border-color: {stringToHex(extension?.locale || [extension?.update].flat()[0])} !important' class:extension-disabled={!settings.extensionsNew[key]?.enabled} class:extension-error={enabled && isInactive}>
               {#if enabled && isInactive}
                 <button class='btn position-absolute d-flex align-items-center justify-content-center border-0 p-0 z-10 bg-transparent icon-container' disabled={pendingSource} class:cursor-wait={pendingSource} data-toggle='tooltip' data-placement='right' data-title='Extension failed to validate. Click to retry.' use:click={() => validateExtension(key)}>
                   <div class='d-flex align-items-center justify-content-center error-indicator' style='color: var(--danger-color)'><TriangleAlert size='3.6rem' fill='var(--dark-color-light)'/></div>
@@ -225,11 +227,10 @@
                       {#if settings.extensionsNew[key]}
                         <div class='custom-switch fit-content'>
                           <input type='checkbox' id={`extension-${key}`} bind:checked={settings.extensionsNew[key].enabled}
-                            on:change={ async (event) => {
+                            on:change={(event) => {
                               viewSettings = {}
-                              if (event.target.checked) await extensionManager.enableExtension(key)
-                              else await extensionManager.disableExtension(key)
-                              updateAvailable()
+                              if (event.target.checked) extensionManager.enableExtension(key)
+                              else extensionManager.disableExtension(key)
                             }}
                           />
                           <label for={`extension-${key}`}><br/></label>
@@ -245,11 +246,11 @@
                 </div>
               </div>
               <div class='d-flex flex-wrap align-items-end'>
-                <span class='badge border-0 bg-light pl-10 pr-10 mt-10 font-scale-16'>{extension?.version}</span>
-                {#if extension?.type}<span class='badge border-0 bg-light pl-10 pr-10 ml-10 mt-10 font-scale-16'>{capitalize(extension?.type)}</span>{/if}
-                {#if extension?.speed}<span class='badge border-0 bg-light pl-10 pr-10 ml-10 mt-10 font-scale-16' data-toggle='tooltip' data-placement='top' data-title='How quickly query results are received'>{capitalize(extension?.speed)}</span>{/if}
-                {#if extension?.accuracy}<span class='badge border-0 bg-light pl-10 pr-10 ml-10 mt-10 font-scale-16'  data-toggle='tooltip' data-placement='top' data-title='How accurate the query results are'>{capitalize(extension?.accuracy)} Accuracy</span>{/if}
-                {#if extension?.nsfw} <div class='d-flex align-items-center' title='Query results include adult content'><Adult class='ml-10 mt-10' size='2.2rem' /></div>{/if}
+                <span class='badge border-0 bg-light pl-10 pr-10 mr-10 mt-10 font-scale-16'>{extension?.version}</span>
+                {#if extension?.type}<span class='badge border-0 bg-light pl-10 pr-10 mr-10 mt-10 font-scale-16'>{capitalize(extension?.type)}</span>{/if}
+                {#if extension?.speed}<span class='badge border-0 bg-light pl-10 pr-10 mr-10 mt-10 font-scale-16' data-toggle='tooltip' data-placement='top' data-title='How quickly query results are received'>{capitalize(extension?.speed)}</span>{/if}
+                {#if extension?.accuracy}<span class='badge border-0 bg-light pl-10 pr-10 mr-10 mt-10 font-scale-16'  data-toggle='tooltip' data-placement='top' data-title='How accurate the query results are'>{capitalize(extension?.accuracy)} Accuracy</span>{/if}
+                {#if extension?.nsfw} <div class='d-flex align-items-center' title='Query results include adult content'><Adult class='mt-10' size='2.2rem' /></div>{/if}
               </div>
               {#if extension?.settings?.length && viewSettings[key]}
                 <div transition:slide={{ duration: 250, axis: 'y' }}>
@@ -373,17 +374,17 @@
       {#each Object.entries(Object.values(availableExtensions).reduce((a, { update, locale }) => { if (!a[[update].flat()[0]]) a[[update].flat()[0]] = { count: 0, locale }; a[[update].flat()[0]].count += 1; return a }, {})).map(([host, { count, locale }]) => ({ host, count, locale })) as extension}
         <div class='d-flex align-items-center bg-dark-light border rounded-2 p-10 mb-10' style='border-color: {stringToHex(extension?.locale || extension?.host)} !important'>
           <div class='d-flex align-items-center ml-10'>
-            {#if extension?.locale}
+            {#if extension.locale}
               <Folder size='2.2rem' />
-            {:else if extension?.host?.startsWith('gh:')}
+            {:else if extension.host?.startsWith('gh:')}
               <Github size='2.2rem' />
-            {:else if extension?.host?.startsWith('npm:')}
+            {:else if extension.host?.startsWith('npm:')}
               <img class='rounded sourceIcon' src={npmIcon} alt='NPM' title='NPM'/>
             {:else}
               <FileQuestion size='2.2rem' />
             {/if}
           </div>
-          <span class='font-weight-semi-bold ml-10 overflow-hidden text-truncate mr-5 font-scale-18'>{extension.host.replace(/^[^:]+:/, '')}</span>
+          <span class='font-weight-semi-bold ml-10 overflow-hidden text-truncate mr-5 font-scale-18'>{(extension.locale || extension.host).replace(VALID_SCHEMES, '').replace(/^\/+/, '')}</span>
           <span class='font-weight-semi-bold ml-auto text-muted text-nowrap text-truncate'>{extension.count} Extensions</span>
           <ConfirmButton click={() => removeSource(extension.host)} title='Remove Source' class='btn btn-square d-flex align-items-center justify-content-center bg-transparent shadow-none border-0 {pendingSource ? `cursor-wait` : ``} text-danger' disabled={pendingSource} primaryClass='ml-10' confirmText='' cancelText='' confirmClass='btn-square text-success w-auto' cancelClass='ml-10 text-muted w-auto' actionClass='d-inline-flex flex-row-reverse'>
             <Trash2 size='1.8rem' />
@@ -398,7 +399,9 @@
       {#each addedSources as sourceUrl, i}
         <div class='d-flex align-items-center bg-dark-light border rounded-2 p-10 mb-10'>
           <div class='d-flex align-items-center ml-10'>
-            {#if sourceUrl.startsWith('gh:')}
+            {#if sourceUrl.startsWith('extension:')}
+              <Folder size='2.2rem' />
+            {:else if sourceUrl.startsWith('gh:')}
               <Github size='2.2rem' />
             {:else if sourceUrl.startsWith('npm:')}
               <img class='rounded sourceIcon' src={npmIcon} alt='NPM' title='NPM'/>
@@ -406,7 +409,7 @@
               <FileQuestion size='2.2rem' />
             {/if}
           </div>
-          <span class='font-weight-semi-bold ml-10 overflow-hidden text-truncate mr-5 font-scale-18'>{sourceUrl.replace(/^[^:]+:/, '')}</span>
+          <span class='font-weight-semi-bold ml-10 overflow-hidden text-truncate mr-5 font-scale-18'>{sourceUrl.replace(VALID_SCHEMES, '').replace(/^\/+/, '')}</span>
           <span class='font-weight-semi-bold ml-auto text-muted text-nowrap text-truncate'>{availableSources[sourceUrl].length} Sources</span>
           <ConfirmButton click={() => removeSource(sourceUrl, true)} title='Remove Repository' class='btn btn-square d-flex align-items-center justify-content-center bg-transparent shadow-none border-0 {pendingSource ? `cursor-wait` : ``} text-danger' disabled={pendingSource} primaryClass='ml-10' confirmText='' cancelText='' confirmClass='btn-square text-success w-auto' cancelClass='ml-10 text-muted w-auto' actionClass='d-inline-flex flex-row-reverse'>
             <Trash2 size='1.8rem' />
@@ -416,7 +419,7 @@
     </div>
   {/if}
   {#if availableSources && Object.keys(availableSources)?.length}
-    {@const missingSources = Object.values(availableSources).flat().filter(entry => !Object.values(availableExtensions).some(existing => [entry.main].flat().includes([existing.update].flat()[0]))).map(entry => [entry.main].flat()[0])}
+    {@const missingSources = Object.values(availableSources).flat().filter(entry => !Object.values(availableExtensions).some(existing => [entry.main].flat().map(m => normalizeUrl(m)).includes(normalizeUrl([existing.update].flat()[0])))).map(entry => [entry.main].flat()[0])}
     {#if missingSources.length}
       <div class='wm-1200'>
         <button type='button' class='btn w-full h-full p-5 rounded-2 d-flex align-items-center long-button' class:bg-dark-light={!viewSources} class:bg-primary={viewSources} use:click={() => { viewSources = !viewSources }}>
@@ -429,7 +432,9 @@
           {#each missingSources as source, i}
             <div class='d-flex align-items-center bg-dark-light border rounded-2 p-10 mb-10'>
               <div class='d-flex align-items-center ml-10'>
-                {#if source.startsWith('gh:')}
+                {#if source.startsWith('extension:')}
+                  <Folder size='2.2rem' />
+                {:else if source.startsWith('gh:')}
                   <Github size='2.2rem' />
                 {:else if source.startsWith('npm:')}
                   <img class='rounded sourceIcon' src={npmIcon} alt='NPM' title='NPM'/>
@@ -437,7 +442,7 @@
                   <FileQuestion size='2.2rem' />
                 {/if}
               </div>
-              <span class='font-weight-semi-bold ml-10 font-scale-18'>{source.startsWith('gh:') ? source.slice(3) : source.startsWith('npm:') ? source.slice(4) : source}</span>
+              <span class='font-weight-semi-bold ml-10 font-scale-18'>{source.replace(VALID_SCHEMES, '').replace(/^\/+/, '')}</span>
               <button type='button' use:click={() => { addSource(source); if (missingSources.length <= 1) viewSources = !viewSources }} class='btn btn-square d-flex align-items-center justify-content-center ml-10 bg-transparent shadow-none border-0 ml-auto' title='Add Source' style='color: var(--success-color)' disabled={pendingSource} class:cursor-wait={pendingSource}><SquarePlus size='1.8rem' /></button>
             </div>
           {/each}
@@ -482,7 +487,7 @@
     opacity: .4;
   }
   .extension-error {
-    opacity: .6;
+    opacity: .7;
     background: var(--danger-color-very-dim) !important;
   }
   .icon-container {

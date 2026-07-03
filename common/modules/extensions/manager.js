@@ -1,27 +1,99 @@
-import { settings } from '@/modules/settings.js'
-import { cache, caches } from '@/modules/cache.js'
 import { getRandomInt, createDeferred } from '@/modules/util.js'
 import { status, printError } from '@/modules/networking.js'
 import is_ip_private from '@rockinchaos/private-ip'
+import { cache, caches } from '@/modules/cache.js'
+import { settings } from '@/modules/settings.js'
 import { SUPPORTS } from '@/modules/support.js'
+import { writable } from 'simple-store-svelte'
 import { toast } from 'svelte-sonner'
 import { wrap } from 'comlink'
 import { parse } from 'tldts'
 import Debug from 'debug'
 const debug = Debug('ui:manager')
 
+/** @type {RegExp} */
+export const CUSTOM_SCHEMES = /^(gh|npm):/
+/** @type {RegExp} */
+export const VALID_SCHEMES = /^(https?:|gh:|npm:|file:|extension:)/
+
+/**
+ * Gets the unique cache key for a source.
+ *
+ * @param {object} source The source object.
+ * @returns {string}
+ */
+export const getKey = (source) => (source?.locale || [source?.update]?.flat()?.[0]) + '/' + source?.id
+
+/**
+ * Normalizes a local file path or file: URL to the extension:// protocol convention.
+ *
+ * @param {string} url The URL or path to normalize.
+ * @returns {string} The normalized URL.
+ */
+export const normalizeUrl = url => /^[A-Z]:/.test(url) || url.startsWith('file:') ? `extension://${url.replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^\/+/, '')}` : url
+
 /**
  * Creates and returns a new Web Worker instance for the given extension source.
+ *
  * @param {object} source The extension source object.
  * @returns {Worker} The created worker instance.
  */
 function createWorker(source) {
-  return new Worker(new URL('@/modules/extensions/worker.js', import.meta.url), { type: 'module', name: (source.locale || ([source.update].flat()[0] + '/')) + source.id })
+  return new Worker(new URL('@/modules/extensions/worker.js', import.meta.url), { type: 'module', name: getKey(source) })
+}
+
+/**
+ * Resolves relative 'main' and 'update' URLs in a manifest against the source URL it was loaded from.
+ * If no manifest is provided, resolves a single URL string against the base instead.
+ *
+ * @param {object[]|string} manifest The parsed manifest array, or a single URL string to resolve.
+ * @param {string} sourceUrl The URL the manifest was fetched from.
+ * @returns {object[]|string} The manifest with resolved URLs, or the resolved URL string.
+ */
+function resolveUrl(manifest, sourceUrl) {
+  const normalizedSource = normalizeUrl(sourceUrl)
+  const baseDir = normalizedSource.startsWith('extension://') || CUSTOM_SCHEMES.test(normalizedSource) ? normalizedSource : normalizedSource.endsWith('/') ? normalizedSource : normalizedSource.replace(/\/[^/]*\.json(\?.*)?$/, '/').replace(/\/[^/]*$/, '/')
+  const collapse = (path) => {
+    const match = path.match(/^([a-z]+:\/\/|[a-z]+:)/i)
+    const prefix = match ? match[0] : ''
+    const out = []
+    for (const part of path.slice(prefix.length).split('/')) {
+      if (part === '..') out.pop()
+      else if (part !== '.' && part !== '') out.push(part)
+    }
+    return prefix + out.join('/')
+  }
+  const join = (base, relative) => collapse((base.endsWith('/') ? base : base + '/') + relative)
+  const resolve = url => {
+    if (!url || VALID_SCHEMES.test(url)) return url
+    try {
+      const relative = url.startsWith('./') ? url.slice(2) : url
+      if (normalizedSource.startsWith('extension://') || CUSTOM_SCHEMES.test(normalizedSource)) {
+        if (url === '.') return baseDir.replace(/\/$/, '')
+        return join(baseDir, relative)
+      }
+      if (url === '.') return baseDir.replace(/\/$/, '')
+      return new URL(relative, baseDir).href
+    } catch {
+      return url
+    }
+  }
+  if (typeof manifest === 'string') return resolve(manifest)
+  if (Array.isArray(manifest)) {
+    for (const entry of manifest) {
+      if (!entry) continue
+      const resolveMain = entry.locale ? url => (!url || VALID_SCHEMES.test(url)) ? url : join(entry.locale, url.startsWith('./') ? url.slice(2) : url) : resolve
+      if (entry.update) entry.update = Array.isArray(entry.update) ? entry.update.map(resolve) : resolve(entry.update)
+      if (entry.main) entry.main = Array.isArray(entry.main) ? entry.main.map(resolveMain) : resolveMain(entry.main)
+    }
+  }
+  return manifest
 }
 
 /**
  * Fetches and validates an extension manifest from a given URL.
  * Supports 'gh:', 'npm:', 'file:', 'extension:', and 'http(s)' protocols.
+ *
  * @param {string} urls The manifest URLs or file path.
  * @param {boolean} updateCheck If the reason for getting the manifest is to check for updates.
  * @returns {Promise<object[]|null>} A parsed manifest array or null on error.
@@ -29,15 +101,15 @@ function createWorker(source) {
 async function getManifest(urls, updateCheck = false) {
   for (const url of [urls].flat()) {
     try {
-      if (url.startsWith('http')) return await (await fetch(url)).json()
+      if (url.startsWith('http')) return resolveUrl(await (await fetch(url)).json(), url)
       if (/^[A-Z]:/.test(url) || url.startsWith('file:') || url.startsWith('extension:')) {
         const localeURL = (url.startsWith('extension:') ? url.replace(/^extension:/, 'file:') : url.startsWith('file:') ? url.replace(/^file:(?!\/{3})/, 'file:///') : `file:///${url.replace(/\\/g, '/')}`).replace(/^file:\/+/, 'file:///')
         const manifest = await (await fetch(localeURL + (!/\.json(\?|$)/i.test(localeURL) ? `${localeURL.endsWith('/') ? '' : '/'}index.json` : ''))).json()
         const basePath = url.replace(/^extension:/, '').replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^[\/]+/, '').replace(/[^/]+\.json$/, '')
         for (const source of manifest) {
-          if (source?.id) source.locale = `extension://${basePath}${basePath.endsWith('/') ? '' : '/'}`
+          if (source?.id) source.locale = `extension://${basePath.endsWith('/') ? basePath.slice(0, -1) : basePath}`
         }
-        return manifest
+        return resolveUrl(manifest, url)
       }
       const {pathname, protocol} = new URL(url)
       if (protocol !== 'gh:' && protocol !== 'npm:') throw new Error(`Unknown protocol for source, expected: 'gh:', 'npm:', 'file:', 'extension:', or 'http(s)'`)
@@ -48,9 +120,7 @@ async function getManifest(urls, updateCheck = false) {
         error.status = response.status
         throw error
       }
-      const manifest = await response.json()
-      if (!Array.isArray(manifest)) throw new Error('Manifest is not an array')
-      return manifest
+      return resolveUrl(await response.json(), url)
     } catch (error) {
       if (!updateCheck || !(error?.status === 429 || error?.status === 404 || error?.status === 503)) await printError('Failed to fetch Source', `Unable to load manifest for: ${url}`, error)
     }
@@ -60,6 +130,7 @@ async function getManifest(urls, updateCheck = false) {
 
 /**
  * Fetches the JavaScript code for a given extension from the provided URL.
+ *
  * @param {string} name The extension name or ID.
  * @param {string} urls The source URLs.
  * @returns {Promise<string|null>} The fetched extension code or null on failure.
@@ -108,10 +179,10 @@ async function getExtension(name, urls) {
 class ExtensionManager {
   /** @type {Map<string, Promise<any>>} */
   pending = new Map()
-  /** @type {Record<string, import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>>} */
-  activeWorkers = {}
-  /** @type {Record<string, import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>>} */
-  inactiveWorkers = {}
+  /** @type {import('simple-store-svelte').Writable<Record<string, import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>>>} */
+  activeWorkers = writable({})
+  /** @type {import('simple-store-svelte').Writable<Record<string, import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>>>} */
+  inactiveWorkers = writable({})
   /** @type {{promise: Promise<boolean>, resolve: (function(boolean): void)}} */
   whenReady = createDeferred()
   /** @type {Map<string, Promise<void>>} */
@@ -139,52 +210,47 @@ class ExtensionManager {
       }
     })
 
-    window.addEventListener('online', async () => {
-      const tasks = Object.entries(extensionManager.inactiveWorkers).map(async ([key, worker]) => {
-        if (extensionManager.activeWorkers[key] || !settings.value.extensionsNew[key]?.enabled) return
-        try {
-          if (!(await worker.validate())) throw new Error('The content source appears to be unreachable.')
-          extensionManager.activeWorkers[key] = worker
-          delete extensionManager.inactiveWorkers[key]
-          settings.set(settings.value)
-        } catch (error) {
-          if (extensionManager.inactiveWorkers[key]) worker.terminate()
-          await printError(`Failed to load extension ${key}`, 'Validation has failed', error)
-        }
-      })
-      await Promise.all(tasks)
+    let _status = navigator.onLine ? 'online' : 'offline'
+    status.subscribe(async value => {
+      if (_status === 'offline' && value === 'online') {
+        const tasks = Object.entries(this.inactiveWorkers.value).map(async ([key, worker]) => {
+          if (this.activeWorkers.value[key] || !settings.value.extensionsNew[key]?.enabled) return
+          try {
+            if (!(await worker.validate())) throw new Error('The content source appears to be unreachable.')
+            this.activeWorkers.update(value => ({
+              ...value,
+              [key]: worker
+            }))
+            this.inactiveWorkers.update(value => {
+              const { [key]: _, ...rest } = value
+              return rest
+            })
+          } catch (error) {
+            if (this.inactiveWorkers.value[key]) worker.terminate()
+            await printError(`Failed to load extension ${key}`, 'Validation has failed', error)
+          }
+        })
+        await Promise.all(tasks)
+      }
+      if (value === 'offline' || value === 'online') _status = value
     })
   }
 
   /**
-   * Checks if the keyed extension source exists in the active workers.
-   * @param {string} key The identifier for the extension worker.
-   * @returns {import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>} The active worker instance, or undefined if not found.
-   */
-  isActive(key) {
-    return this.activeWorkers[key]
-  }
-
-  /**
-   * Checks if the keyed extension source exists in the inactive workers.
-   * @param {string} key The identifier for the extension worker.
-   * @returns {import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>} The inactive worker instance, or undefined if not found.
-   */
-  isInactive(key) {
-    return this.inactiveWorkers[key]
-  }
-
-  /**
    * Validates and activates an inactive extension worker by key.
+   *
    * @param {string} key The identifier for the extension worker to validate.
    * @returns {Promise<void>}
    */
   async validateExtension(key) {
     if (!settings.value.extensionsNew[key]?.enabled) return
-    const inactiveWorker = this.inactiveWorkers[key]
+    const inactiveWorker = this.inactiveWorkers.value[key]
     if (!inactiveWorker) return
     try {
-      delete this.inactiveWorkers[key]
+      this.inactiveWorkers.update(value => {
+        const { [key]: _, ...rest } = value
+        return rest
+      })
       let validated
       let validationError
       try {
@@ -195,13 +261,20 @@ class ExtensionManager {
       }
       if (!validated && (await inactiveWorker.hasBadModule())) {
         await this.getExtensionCode(key, inactiveWorker)
-        if (this.activeWorkers[key]) return
+        if (this.activeWorkers.value[key]) return
       }
       if (!validated) throw validationError || new Error('The content source appears to be unreachable.')
-      this.activeWorkers[key] = inactiveWorker
-      settings.set(settings.value)
+      this.activeWorkers.update(value => ({
+        ...value,
+        [key]: inactiveWorker
+      }))
     } catch (error) {
-      if (!this.activeWorkers[key]) this.inactiveWorkers[key] = inactiveWorker
+      if (!this.activeWorkers.value[key]) {
+        this.inactiveWorkers.update(value => ({
+          ...value,
+          [key]: inactiveWorker
+        }))
+      }
       await printError(`Failed to load extension ${key}`, 'Validation has failed', error)
     }
   }
@@ -216,51 +289,62 @@ class ExtensionManager {
    * @throws {Error} If the extension fails validation or initialization.
    */
   async getExtensionCode(key, worker) {
-    let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => (extension?.locale || ([extension?.update].flat()[0] + '/')) + main))
     const extension = (cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})[key]
+    let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => !main || VALID_SCHEMES.test(main) ? main : `${extension?.locale || [extension?.update].flat()[0]}/${main}`))
     if (newCode && typeof newCode === 'string' && newCode.trim().length > 0) {
       if (!extension.locale) {
         await cache.cacheEntry(caches.QUERY_EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
         try {
           const initialize = await worker.initialize(key, extension.type, newCode, { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })
           if (!initialize.validated) {
-            this.inactiveWorkers[key] = worker
-            settings.set(settings.value)
+            this.inactiveWorkers.update(value => ({
+              ...value,
+              [key]: worker
+            }))
             throw new Error(initialize.error)
           }
         } catch (error) {
-          if (!this.inactiveWorkers[key]) worker.terminate()
-          settings.set(settings.value)
+          if (!this.inactiveWorkers.value[key]) worker.terminate()
           throw new Error(error)
         }
-        this.activeWorkers[key] = worker
-        settings.set(settings.value)
+        this.activeWorkers.update(value => ({
+          ...value,
+          [key]: worker
+        }))
       }
     }
   }
 
-  /** Terminates all workers and reloads extensions from settings. */
+  /** Terminates all workers and reloads extensions. */
   reloadExtensions() {
-    Object.values(this.activeWorkers).forEach(worker => worker.terminate())
-    Object.values(this.inactiveWorkers).forEach(worker => worker.terminate())
-    this.activeWorkers = {}
-    this.inactiveWorkers = {}
+    Object.values(this.activeWorkers.value).forEach(worker => worker.terminate())
+    Object.values(this.inactiveWorkers.value).forEach(worker => worker.terminate())
+    this.activeWorkers.set({})
+    this.inactiveWorkers.set({})
     this.whenReady = createDeferred()
     this.loadExtensions(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})
+    debug(`Extensions have been reloaded`)
   }
 
   /**
    * Disables an extension by terminating its worker.
+   *
    * @param {string} key The extension key.
    */
   disableExtension(key) {
-    if (this.activeWorkers[key]) {
-      this.activeWorkers[key].terminate()
-      delete this.activeWorkers[key]
+    if (this.activeWorkers.value[key]) {
+      this.activeWorkers.value[key].terminate()
+      this.activeWorkers.update(value => {
+        const { [key]: _, ...rest } = value
+        return rest
+      })
     }
-    if (this.inactiveWorkers[key]) {
-      this.inactiveWorkers[key].terminate()
-      delete this.inactiveWorkers[key]
+    if (this.inactiveWorkers.value[key]) {
+      this.inactiveWorkers.value[key].terminate()
+      this.inactiveWorkers.update(value => {
+        const { [key]: _, ...rest } = value
+        return rest
+      })
     }
     debug(`Disabled extension ${key}`)
   }
@@ -272,7 +356,7 @@ class ExtensionManager {
    * @returns {Promise<void>}
    */
   async enableExtension(key) {
-    if (this.activeWorkers[key] || this.loadingExtensions.has(key)) return
+    if (this.activeWorkers.value[key] || this.loadingExtensions.has(key)) return
     const extension = (cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})[key]
     if (!extension) return
     debug(`Enabling extension ${key}`)
@@ -286,7 +370,7 @@ class ExtensionManager {
    * @returns {Promise<void>}
    */
   async updateExtensionSettings(key) {
-    const worker = this.activeWorkers[key]
+    const worker = this.activeWorkers.value[key]
     if (!worker || this.loadingExtensions.has(key)) return
     const extension = settings.value.extensionsNew[key]
     if (!extension) return
@@ -303,13 +387,19 @@ class ExtensionManager {
     const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
     for (const [_key, source] of Object.entries(extensionSources)) {
       if ([source.update].flat()[0] === extensionId) {
-        const key = (source.locale || ([source.update].flat()[0]) + '/') + source.id
-        if (this.activeWorkers[key]) {
-          this.activeWorkers[key].terminate()
-          delete this.activeWorkers[key]
-        } else if (this.inactiveWorkers[key]) {
-          this.inactiveWorkers[key].terminate()
-          delete this.inactiveWorkers[key]
+        const key = getKey(source)
+        if (this.activeWorkers.value[key]) {
+          this.activeWorkers.value[key].terminate()
+          this.activeWorkers.update(value => {
+            const { [key]: _, ...rest } = value
+            return rest
+          })
+        } else if (this.inactiveWorkers.value[key]) {
+          this.inactiveWorkers.value[key].terminate()
+          this.inactiveWorkers.update(value => {
+            const { [key]: _, ...rest } = value
+            return rest
+          })
         }
         delete extensionSources[_key]
         cache.deleteEntry(caches.QUERY_EXTENSIONS, _key).catch(error => debug('Failed to delete cache entry for removed source:', error))
@@ -341,14 +431,16 @@ class ExtensionManager {
           return `Failed to load extension(s) from the provided source '${url}': ${status.value !== 'offline' ? 'the source is not valid.' : 'no network connection!'}`
         }
         if (config.every(entry => entry?.main && !entry?.update)) { // source repository manifests
+          const normalizedUrl = normalizeUrl(url)
           const repositorySources = cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources') || {}
-          const current = repositorySources[url]
+          const current = repositorySources[normalizedUrl]
           if (JSON.stringify(current) !== JSON.stringify(config)) {
-            cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', { ...repositorySources, [url]: config })
+            cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', { ...repositorySources, [normalizedUrl]: config })
+            debug(`Stored new source repository: ${normalizedUrl}`)
           } else {
-            debug(`Source repository unchanged: ${url}`)
+            debug(`Source repository unchanged: ${normalizedUrl}`)
             this.pending.delete(url)
-            return `Source repository unchanged: ${url}`
+            return `Source repository unchanged: ${normalizedUrl}`
           }
         } else { // extension manifests
           for (const extension of config) {
@@ -360,14 +452,14 @@ class ExtensionManager {
           }
           const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
           config.forEach(extension => {
-            const key = (extension.locale || ([extension.update].flat()[0]) + '/') + extension.id
+            const key = getKey(extension)
             extensionSources[key] = extension
           })
           cache.setEntry(caches.QUERY_EXTENSIONS, 'extensionSources', extensionSources)
           settings.update(value => {
             const extensionsNew = { ...value.extensionsNew }
             config.forEach(extension => {
-              const key = (extension.locale || ([extension.update].flat()[0] + '/')) + extension.id
+              const key = getKey(extension)
               if (!extensionsNew[key]) {
                 const defaults = Object.fromEntries((extension.settings || []).map(setting => [setting.key, setting.default ?? null]))
                 extensionsNew[key] = { enabled: false, settings: defaults }
@@ -394,11 +486,11 @@ class ExtensionManager {
    * @returns {Promise<import('comlink').Remote<import('@/modules/extensions/worker.js').Worker>|null>}
    */
   async whenExtensionReady(key) {
-    if (this.activeWorkers[key]) return this.activeWorkers[key]
-    if (this.inactiveWorkers[key]) return null
+    if (this.activeWorkers.value[key]) return this.activeWorkers.value[key]
+    if (this.inactiveWorkers.value[key]) return null
     if (this.loadingExtensions.has(key)) {
       await this.loadingExtensions.get(key)
-      return this.activeWorkers[key] || null
+      return this.activeWorkers.value[key] || null
     }
     return null
   }
@@ -415,7 +507,7 @@ class ExtensionManager {
     if (!extensionIds?.length) return false
     const modules = !update ? Object.fromEntries(await Promise.all(extensionIds.map(async (id) => {
       try {
-        const cachedModule = await cache.cachedEntry(caches.QUERY_EXTENSIONS, (extensions[id]?.locale || ([extensions[id]?.update].flat()[0] + '/')) + extensions[id]?.id, true)
+        const cachedModule = await cache.cachedEntry(caches.QUERY_EXTENSIONS, getKey(extensions[id]), true)
         if (!cachedModule || (typeof cachedModule === 'string' && cachedModule.trim().length === 0)) {
           debug(`Cached module for ${id} is invalid, will refetch`)
           return null
@@ -432,7 +524,7 @@ class ExtensionManager {
         if (!settings.value.extensionsNew[key]?.enabled) return
         if (!modules[key]) {
           const extension = extensions[key]
-          let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => (extension?.locale || ([extension?.update].flat()[0] + '/')) + main))
+          let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => !main || VALID_SCHEMES.test(main) ? main : `${extension?.locale || [extension?.update].flat()[0]}/${main}`))
           if (newCode && typeof newCode === 'string' && newCode.trim().length > 0) {
             if (!extension.locale) {
               modules[key] = await cache.cacheEntry(caches.QUERY_EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
@@ -456,7 +548,7 @@ class ExtensionManager {
           }
         }
 
-        if (!this.activeWorkers[key]) {
+        if (!this.activeWorkers.value[key]) {
           try {
             const extension = extensions[key]
             const worker = createWorker(extension)
@@ -467,24 +559,34 @@ class ExtensionManager {
               const initialize = await remoteWorker.initialize(key, extension.type, modules[key], { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })
               if (!initialize.validated && initialize.stub) {
                 await this.getExtensionCode(key, remoteWorker)
-                if (this.activeWorkers[key]) return
+                if (this.activeWorkers.value[key]) return
               }
               if (!initialize.validated) {
-                this.inactiveWorkers[key] = remoteWorker
-                settings.set(settings.value)
+                this.inactiveWorkers.update(value => ({
+                  ...value,
+                  [key]: remoteWorker
+                }))
                 throw new Error(initialize.error)
               }
-              if (this.activeWorkers[key]) {
-                this.activeWorkers[key].terminate()
-                delete this.activeWorkers[key]
-              } else if (this.inactiveWorkers[key]) {
-                this.inactiveWorkers[key].terminate()
-                delete this.inactiveWorkers[key]
+              if (this.activeWorkers.value[key]) {
+                this.activeWorkers.value[key].terminate()
+                this.activeWorkers.update(value => {
+                  const { [key]: _, ...rest } = value
+                  return rest
+                })
+              } else if (this.inactiveWorkers.value[key]) {
+                this.inactiveWorkers.value[key].terminate()
+                this.inactiveWorkers.update(value => {
+                  const { [key]: _, ...rest } = value
+                  return rest
+                })
               }
-              this.activeWorkers[key] = remoteWorker
-              settings.set(settings.value)
+              this.activeWorkers.update(value => ({
+                ...value,
+                [key]: remoteWorker
+              }))
             } catch (error) {
-              if (!this.inactiveWorkers[key]) worker.terminate()
+              if (!this.inactiveWorkers.value[key]) worker.terminate()
               throw new Error(error)
             }
           } catch (error) {
@@ -511,12 +613,13 @@ class ExtensionManager {
     try {
       const repositoryManifest = await getManifest(url, true)
       if (!repositoryManifest || !Array.isArray(repositoryManifest) || !repositoryManifest.every(entry => entry?.main && !entry?.update)) return 0
+      const normalizedUrl = normalizeUrl(url)
       const repositorySources = cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources') || {}
-      if (JSON.stringify(repositorySources[url]) !== JSON.stringify(repositoryManifest)) {
-        const existingMains = new Set((repositorySources[url] || []).map(entry => entry.main))
+      if (JSON.stringify(repositorySources[normalizedUrl]) !== JSON.stringify(repositoryManifest)) {
+        const existingMains = new Set((repositorySources[normalizedUrl] || []).map(entry => entry.main))
         const newCount = repositoryManifest.filter(entry => !existingMains.has(entry.main)).length
-        debug(`Source repository updated: ${url}`)
-        cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', { ...repositorySources, [url]: repositoryManifest })
+        cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', { ...repositorySources, [normalizedUrl]: repositoryManifest })
+        debug(`Source repository updated: ${normalizedUrl}`)
         return newCount
       }
       debug(`Source repository unchanged: ${url}`)
@@ -572,9 +675,12 @@ class ExtensionManager {
         debug(`Found ${toUpdate.length} extensions to update:`, toUpdate.map(update => update.oldId))
         toUpdate.forEach(({ oldId }) => {
           try {
-            if (this.activeWorkers[oldId]) {
-              this.activeWorkers[oldId].terminate()
-              delete this.activeWorkers[oldId]
+            if (this.activeWorkers.value[oldId]) {
+              this.activeWorkers.value[oldId].terminate()
+              this.activeWorkers.update(value => {
+                const { [oldId]: _, ...rest } = value
+                return rest
+              })
             }
           } catch (error) {
             debug('Failed to terminate active workers during update')
@@ -582,7 +688,7 @@ class ExtensionManager {
         })
         const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
         toUpdate.forEach(({ oldId, latest }) => {
-          const newId = (latest.locale || ([latest.update].flat()[0]) + '/') + latest.id
+          const newId = getKey(latest)
           extensionSources[newId] = latest
           if (newId !== oldId) delete extensionSources[oldId]
         })
@@ -590,7 +696,7 @@ class ExtensionManager {
         settings.update((value) => {
           const extensionsNew = { ...value.extensionsNew }
           toUpdate.forEach(({ oldId, latest }) => {
-            const newId = (latest.locale || ([latest.update].flat()[0] + '/')) + latest.id
+            const newId = getKey(latest)
             if (newId !== oldId) {
               if (extensionsNew[oldId]) {
                 extensionsNew[newId] = extensionsNew[oldId]
@@ -615,14 +721,14 @@ class ExtensionManager {
         debug(`Found ${toAdd.length} new extensions to add:`, toAdd.map(extension => extension.id))
         const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
         toAdd.forEach(extension => {
-          const key = (extension.locale || ([extension.update].flat()[0]) + '/') + extension.id
+          const key = getKey(extension)
           extensionSources[key] = extension
         })
         cache.setEntry(caches.QUERY_EXTENSIONS, 'extensionSources', extensionSources)
         settings.update((value) => {
           const extensionsNew = { ...value.extensionsNew }
           toAdd.forEach(extension => {
-            const key = (extension.locale || ([extension.update].flat()[0] + '/')) + extension.id
+            const key = getKey(extension)
             if (!extensionsNew[key]) {
               const defaults = Object.fromEntries((extension.settings || []).map(settings => [settings.key, settings.default ?? null]))
               extensionsNew[key] = { enabled: false, settings: defaults }
