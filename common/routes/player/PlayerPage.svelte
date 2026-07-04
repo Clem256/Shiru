@@ -1663,7 +1663,7 @@
     on:ended={tryPlayNext}
     on:loadedmetadata={initThumbnails}
     on:loadedmetadata={findChapters}
-    on:loadedmetadata={autoPlay}
+    on:loadedmetadata={() => autoPlay()}
     on:loadedmetadata={checkAudio}
     on:loadedmetadata={checkSubtitle}
     on:loadedmetadata={clearLoadInterval}
