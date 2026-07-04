@@ -1,21 +1,51 @@
 name: Electron Build and Release
 
 on:
-  workflow_dispatch:  # Allows manual triggering
-  push:
-    branches:
-      - 'main'
-      - 'master'
-    paths-ignore:
-      - '**.md'
-      - '**.yml'
+  workflow_dispatch:
+    inputs:
+      version_confirmed:
+        description: 'I have verified the version in electron/package.json and confirm this release is intentional'
+        required: true
+        default: false
+        type: boolean
 
 env:
   NODE_VERSION: '24.15.0'
   PNPM_VERSION: '10.34.1'
 
 jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.version_confirmed == true }}
+    outputs:
+      app_version: ${{ steps.read_version.outputs.app_version }}
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+
+      - name: Read Release Version
+        id: read_version
+        run: |
+          VERSION=$(node -p "require('./electron/package.json').version")
+          APP_VERSION="v$VERSION"
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "App Version: $APP_VERSION"
+
+      - name: Prepare GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APP_VERSION="${{ steps.read_version.outputs.app_version }}"
+          if ! gh release view "$APP_VERSION" > /dev/null 2>&1; then
+            echo "Release $APP_VERSION not found, creating draft..."
+            gh release create "$APP_VERSION" --draft --title "${APP_VERSION#v}" --notes ""
+          else
+            echo "Release $APP_VERSION already exists, skipping creation."
+          fi
+
   release-windows:
+    needs: prepare-release
     runs-on: windows-2022
 
     steps:
@@ -46,6 +76,7 @@ jobs:
           npm run publish
 
   release-linux:
+    needs: prepare-release
     runs-on: ubuntu-latest
 
     steps:
@@ -83,6 +114,7 @@ jobs:
           npm run publish
 
   release-macos:
+    needs: prepare-release
     runs-on: macos-latest
 
     steps:
@@ -116,7 +148,10 @@ jobs:
           npm run publish
 
   release-android:
+    needs: prepare-release
     runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.prepare-release.outputs.app_version }}
 
     defaults:
       run:
@@ -169,21 +204,6 @@ jobs:
       - name: Stop Gradle Daemon
         run: cd android && ./gradlew --stop
 
-      - name: Get or Create Release Tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(node -p "require('../electron/package.json').version")
-          APP_VERSION="v$VERSION"
-          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
-          echo "App Version: $APP_VERSION"
-          if ! gh release view "$APP_VERSION" > /dev/null 2>&1; then
-            echo "Release Tag $APP_VERSION not found, creating draft..."
-            gh release create "$APP_VERSION" --draft --title "$VERSION" --notes ""
-          else
-            echo "Release Tag $APP_VERSION already exists, skipping creation."
-          fi
-
       - name: Sign Android APK
         id: sign_app
         uses: RockinChaos/sign-android@v1.1.0
@@ -206,7 +226,7 @@ jobs:
 
       - name: Generate latest-android.yml
         run: |
-          echo "version: ${APP_VERSION#v}" > latest-android.yml
+          echo "version: ${{ env.APP_VERSION }}" | sed 's/^version: v/version: /' > latest-android.yml
 
       - name: Publish Android APK
         env:
@@ -215,11 +235,11 @@ jobs:
           for f in "${{ steps.signed_files.outputs._0 }}" "${{ steps.signed_files.outputs._1 }}" "${{ steps.signed_files.outputs._2 }}" "${{ steps.signed_files.outputs._3 }}"; do
             if [ -n "$f" ]; then
               echo "uploading $(basename $f)"
-              gh release upload --clobber "${{ env.APP_VERSION }}" "../$f"
+              gh release upload --clobber "$APP_VERSION" "../$f"
             fi
           done
           echo "uploading latest-android.yml"
-          gh release upload --clobber "${{ env.APP_VERSION }}" latest-android.yml
+          gh release upload --clobber "$APP_VERSION" latest-android.yml
 
       - name: Clean Build Artifacts
         run: rm -rf ./build
