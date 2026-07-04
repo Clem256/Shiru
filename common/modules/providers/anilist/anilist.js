@@ -5,7 +5,7 @@ import Bottleneck from 'bottleneck'
 import { alToken, settings, validateToken } from '@/modules/settings.js'
 import { malDubs } from '@/modules/anime/animedubs.js'
 import { isSubbedProgress, getMediaMaxEp } from '@/modules/anime/anime.js'
-import { getRandomInt, sleep, debounce, uniqueStore } from '@/modules/util.js'
+import { getRandomInt, sleep, debounce, uniqueStore, normalizeASCII } from '@/modules/util.js'
 import { printError, status } from '@/modules/networking.js'
 import { cache, caches, mediaCache } from '@/modules/cache.js'
 import { MutationQueue } from '@/modules/providers/lib/mutationqueue.js'
@@ -621,7 +621,7 @@ class AnilistClient {
     /** @type {Record<`v${number}`, string>} */
     const requestVariables = flattenedTitles.reduce((obj, { title, isAdult }, i) => {
       if (isAdult && i !== 0) return obj
-      obj[`v${i}`] = title
+      obj[`v${i}`] = normalizeASCII(title) // stupid fix because AniList search sucks.
       return obj
     }, {})
 
@@ -687,6 +687,7 @@ class AnilistClient {
   search(variables = {}) {
     if (settings.value.adult === 'none') variables.isAdult = false
     if (settings.value.adult !== 'hentai' && (!variables.genre_not || !variables.genre_not.includes('Hentai'))) variables.genre_not = [ ...(variables.genre_not ? variables.genre_not : []), 'Hentai' ]
+    if (variables.search) variables.search = normalizeASCII(variables.search) // stupid fix because AniList search sucks.
 
     debug(`Searching ${JSON.stringify(variables)}`)
     const cachedEntry = cache.cachedEntry(caches.QUERY_SEARCH, JSON.stringify(variables), status.value.match(/offline/i))
@@ -743,6 +744,7 @@ class AnilistClient {
     variables.sort = variables.sort || 'OMIT'
     if (settings.value.adult === 'none') variables.isAdult = false
     if (settings.value.adult !== 'hentai' && (!variables.genre_not || !variables.genre_not.includes('Hentai'))) variables.genre_not = [ ...(variables.genre_not ? variables.genre_not : []), 'Hentai' ]
+    if (variables.search) variables.search = normalizeASCII(variables.search) // stupid fix because AniList search sucks.
 
     debug(`Searching for IDs ${JSON.stringify(variables)}`)
     const cachedEntry = !variables.skipCache && cache.cachedEntry(caches.QUERY_SEARCH_IDS, JSON.stringify(variables), status.value.match(/offline/i))

@@ -58,6 +58,25 @@ export function stringToHex(str) {
 }
 
 /**
+ * Converts text to ASCII-friendly form (fiancée to fiancee).
+ * This shouldn't be needed but as of 5/11/2026 AniList search has become very unusable
+ * even for exact title matching because they no longer support ASCII characters.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function normalizeASCII(text) {
+  return text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/\u00A0/g, ' ')
+}
+
+/**
  * Creates a deferred promise that can be resolved or rejected manually.
  * @returns {{ promise: Promise<boolean>, resolve: (value?: boolean) => void, reject: (reason?: any) => void }}
  */
