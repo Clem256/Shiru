@@ -72,6 +72,7 @@
 
 <div
     class='notification-item shadow-lg position-relative d-flex align-items-center mx-20 my-5 p-5 scale pointer'
+    style:--status-color={notWatching && !delayed ? 'var(--gray-color-very-dim)' : completed && !delayed ? 'var(--completed-color)' : announcement ? 'var(--duodenary-color)' : (behind && !notWatching) || delayed ? 'var(--dropped-color)' : !behind && !notWatching && !repeating ? 'var(--current-color)' : !behind && !notWatching && repeating ? 'var(--repeating-color)' : ''}
     role='button'
     tabindex='0'
     class:read={!isUnread}
@@ -94,7 +95,7 @@
     </div>
   {/if}
   <div class='rounded-5 d-flex justify-content-center align-items-center overflow-hidden mr-10 z-10 icon-container'>
-    <SmartImage class={`rounded-5 w-auto`} images={[notification.iconXL, notification.icon, media?.coverImage?.extraLarge, media?.coverImage?.medium, './404_cover.png']} style='height: 100%; object-fit: cover; object-position: center;'/>
+    <SmartImage class={`rounded-5 w-auto`} images={[notification.iconXL, notification.icon, media?.coverImage?.extraLarge, media?.coverImage?.medium, (!media ? './404_cover.jpg' : './no_image_cover.jpg')]} color='var(--status-color)' style='height: 100%; object-fit: cover; object-position: center;'/>
   </div>
   <div class='notification-content z-10 w-full'>
     <div class='d-flex'>
@@ -191,13 +192,12 @@
     animation: slide-in .5s ease forwards;
     border-radius: .75rem;
   }
-  .notification-item.read         { opacity: .5; }
-  .notification-item.current      { border-left: .4rem solid var(--current-color); }
-  .notification-item.repeating    { border-left: .4rem solid var(--repeating-color); }
-  .notification-item.completed    { border-left: .4rem solid var(--completed-color); }
-  .notification-item.behind       { border-left: .4rem solid var(--dropped-color); }
-  .notification-item.announcement { border-left: .4rem solid var(--duodenary-color); }
-  .notification-item.not-watching { border-left: .4rem solid var(--gray-color-very-dim); }
+  .notification-item {
+    border-left: .4rem solid var(--status-color);
+  }
+  .notification-item.read {
+    opacity: .5;
+  }
 
   .notification-title {
     display: -webkit-box;

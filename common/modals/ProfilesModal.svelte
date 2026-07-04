@@ -1,5 +1,5 @@
 <script context='module'>
-  import { createListener, generateRandomString } from '@/modules/util.js'
+  import { createListener, generateRandomString, getAvatar } from '@/modules/util.js'
   import { writable } from 'simple-store-svelte'
   import { swapProfiles, alToken, malToken, profiles, sync } from '@/modules/settings.js'
   import { clientID } from '@/modules/providers/myanimelist/myanimelist.js'
@@ -95,7 +95,7 @@
   </div>
   <div class='d-flex flex-column align-items-center'>
     {#if $currentProfile}
-      <SmartImage class='h-150 rounded-circle' images={[$currentProfile.viewer.data.Viewer['avatar']?.large, $currentProfile.viewer.data.Viewer['avatar']?.medium, $currentProfile.viewer.data.Viewer['picture'], './404_square.png']} title='Current Profile'/>
+      <SmartImage class='h-150 rounded-circle' images={[$currentProfile.viewer.data.Viewer['avatar']?.large, $currentProfile.viewer.data.Viewer['avatar']?.medium, $currentProfile.viewer.data.Viewer['picture'], `./${getAvatar($currentProfile.viewer.data.Viewer.id)}`]} title='Current Profile'/>
       <img class='h-3 auth-icon rounded-circle' src={isAniProfile($currentProfile) ? './anilist_icon.png' : './myanimelist_icon.png'} alt={isAniProfile($currentProfile) ? 'Logged in with AniList' : 'Logged in with MyAnimeList'} title={isAniProfile($currentProfile) ? 'Logged in with AniList' : 'Logged in with MyAnimeList'}>
       <p class='font-size-18 font-weight-bold'>{$currentProfile.viewer.data.Viewer.name}</p>
     {/if}
@@ -110,7 +110,7 @@
       {#each $profiles as profile}
         <button type='button' class='profile-item {profile.reauth ? `authenticate` : ``} box text-left pointer border-0 d-flex align-items-center justify-content-between position-relative flex-wrap z-1' data-toggle='tooltip' data-placement='top' data-title='Switch to Profile: {profile.viewer.data.Viewer.name}' class:not-reactive={!$reactive} use:click={() => switchProfile(profile)}>
           <div class='d-flex align-items-center flex-wrap'>
-            <SmartImage class='h-50 w-50 ml-10 mt-5 mb-5 mr-10 rounded-circle bg-transparent' images={[profile.viewer.data.Viewer.avatar?.large, profile.viewer.data.Viewer.avatar?.medium, profile.viewer.data.Viewer.picture, './404_square.png']}/>
+            <SmartImage class='h-50 w-50 ml-10 mt-5 mb-5 mr-10 rounded-circle bg-transparent' images={[profile.viewer.data.Viewer.avatar?.large, profile.viewer.data.Viewer.avatar?.medium, profile.viewer.data.Viewer.picture, `./${getAvatar(profile.viewer.data.Viewer.id)}`]}/>
             <img class='ml-5 auth-icon rounded-circle' src={isAniProfile(profile) ? './anilist_icon.png' : './myanimelist_icon.png'} alt={isAniProfile(profile) ? 'Logged in with AniList' : 'Logged in with MyAnimeList'} title={isAniProfile(profile) ? 'Logged in with AniList' : 'Logged in with MyAnimeList'}>
             <p class='text-wrap'>{profile.viewer.data.Viewer.name}</p>
           </div>

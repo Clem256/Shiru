@@ -33,6 +33,14 @@ export const codes = {
 }
 
 /**
+ * Returns a deterministic avatar filename based on the provided seed text.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export const getAvatar = text => `avatar_${((String(text) || 'nan').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 4) + 1}.png`
+
+/**
  * Checks whether a value is a valid finite number.
  *
  * @param {*} value - The value to check.

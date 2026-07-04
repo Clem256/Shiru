@@ -186,7 +186,7 @@
             <div class='d-flex flex-sm-row flex-column align-items-sm-end pb-20 mb-15'>
               <div class='cover d-flex flex-row align-items-sm-end align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full' style='max-height: 50vh;'>
                 <div class='position-relative h-full'>
-                  <SmartImage class='rounded cover-img overflow-hidden h-full w-full' color={media.coverImage.color || 'var(--tertiary-color)'} images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './404_cover.png']}/>
+                  <SmartImage class='rounded cover-img overflow-hidden h-full w-full' color={staticMedia?.coverImage?.color || 'var(--tertiary-color)'} images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './no_image_cover.jpg']}/>
                   <AudioLabel {media} viewAnime={true} />
                 </div>
               </div>

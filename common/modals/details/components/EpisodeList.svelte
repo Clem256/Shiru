@@ -306,7 +306,7 @@
                 {#if image}
                   <div class='d-flex'>
                     <div class='overflow-hidden w-full'>
-                      <SmartImage class='img-cover {!SUPPORTS.isAndroid ? `h-150` : `h-165`} w-full w-sm-265 {isSpoiler && [`minimal`, `moderate`, `strict`, `hermit`].includes($settings.spoilers) ? `img-spoiler` : ``}' images={[image, './404_episode.png']}/>
+                      <SmartImage class='img-cover {!SUPPORTS.isAndroid ? `h-150` : `h-165`} w-full w-sm-265 {isSpoiler && [`minimal`, `moderate`, `strict`, `hermit`].includes($settings.spoilers) ? `img-spoiler` : ``}' color='var(--dark-color-very-light)' images={[image, './no_image_episode.jpg']}/>
                     </div>
                     {#if resolvedHash}
                       <div class='position-relative torrent-button-container'>

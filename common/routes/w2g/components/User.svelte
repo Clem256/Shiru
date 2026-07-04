@@ -1,5 +1,7 @@
 <script>
+  import SmartImage from '@/components/visual/SmartImage.svelte'
   import { click } from '@/modules/lib/click.js'
+  import { getAvatar } from '@/modules/util.js'
   import { COMMON } from '@/modules/bridge.js'
   import { ExternalLink } from 'lucide-svelte'
 
@@ -8,7 +10,7 @@
 </script>
 
 <div class='d-flex align-items-center pb-10'>
-  <img src={user?.avatar?.medium || user?.picture || 'https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png'} alt='ProfilePicture' class='w-50 h-50 rounded-circle p-5 mt-auto' />
+  <SmartImage class='w-50 h-50 rounded-circle p-5 mt-auto' images={[user?.avatar?.medium, user?.picture, getAvatar(user?.id || 'Anonymous')]}/>
   <div class='font-size-18 line-height-normal pl-5'>
     {user?.name || 'Anonymous'}
   </div>

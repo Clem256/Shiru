@@ -122,9 +122,9 @@
         </span>
       </div>
     {/if}
-    <div bind:clientWidth={imageWidth} class='d-inline-block position-relative'>
+    <div bind:clientWidth={imageWidth} class='d-inline-block position-relative mb-5'>
       <span class='airing-badge rounded-10 font-weight-semi-bold text-light bg-success' class:d-none={!airingInfo?.episode?.match(/out for/i)}>AIRING</span>
-      <SmartImage class='cover-img cover-color cover-ratio w-full rounded' color={media.coverImage.color || 'var(--tertiary-color)'} images={[media.coverImage.extraLarge, media.coverImage?.medium, './404_cover.png']}/>
+      <SmartImage class='d-inline-block cover-img cover-ratio w-full h-full rounded' color={media.coverImage?.color || 'var(--tertiary-color)'} images={[media.coverImage.extraLarge, media.coverImage?.medium, './no_image_cover.jpg']}/>
       {#if !_variables?.scheduleList}
         <AudioLabel {media} style='transform: scaleY(-1) scale({scale}) !important; transform-origin: right !important; width: {100 / scale}% !important; bottom: {.4 * scale}rem !important;' />
       {/if}

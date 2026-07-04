@@ -600,6 +600,9 @@ a[href]:active, button:not([disabled], .not-reactive):active:not([data-sonner-to
 .mb--3 {
   margin-bottom: -.3rem !important;
 }
+.mb--7 {
+  margin-bottom: -.7rem !important;
+}
 .mb-1 {
   margin-bottom: .1rem !important;
 }

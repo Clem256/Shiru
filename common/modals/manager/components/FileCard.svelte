@@ -6,6 +6,7 @@
     import { createListener, isValidNumber } from '@/modules/util.js'
     import { setHash } from '@/modules/anime/animehash.js'
     import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+    import SmartImage from '@/components/visual/SmartImage.svelte'
     import { modal } from '@/modules/navigation.js'
     import Helper from '@/modules/providers/helper.js'
     import Debug from 'debug'
@@ -88,11 +89,11 @@
 
 <div class='file-item shadow-lg position-relative d-flex align-items-center mx-20 my-5 p-5 scale {$$restProps.class}' class:pointer={!playing} role='button' tabindex='0' title={file?.name} use:blurExit={ () => { if (prompt) setTimeout(() => { prompt = false }) }} use:hoverExit={() => { if (prompt) setTimeout(() => { prompt = false }) }} use:click={() => { if (!behind || prompt || (!playing && !file?.media?.media)) { prompt = false; if (!playing) { modal.close(modal.FILE_MANAGER); playFile(file) } } else if (!playing) { prompt = true } } } class:not-reactive={!$reactive || playing} class:behind={(behind && !notWatching)} class:current={!behind && !notWatching && !repeating} class:repeating={!behind && !notWatching && repeating} class:not-watching={notWatching} class:completed={completed}>
     <div class='position-absolute top-0 left-0 w-full h-full'>
-        <img src={file?.media?.media?.bannerImage || ''} alt='bannerImage' class='hero-img img-cover w-full h-full' />
+        <SmartImage class='img-cover w-full h-full' images={[file?.media?.media?.bannerImage]} style='border-radius: .75rem;'/>
         <div class='position-absolute rounded-5 opacity-transition-hack' style='background: var(--notification-card-gradient)' />
     </div>
     <div class='rounded-5 d-flex justify-content-center align-items-center overflow-hidden mr-10 z-10 file-icon-container'>
-        <img src={file?.media?.media?.coverImage?.medium || file?.media?.media?.coverImage?.extraLarge || './404_cover.png'} alt='icon' class='file-icon rounded-5 w-auto' />
+        <SmartImage class='rounded-5 w-auto' images={[file?.media?.media?.coverImage?.medium, file?.media?.media?.coverImage?.extraLarge, (!file?.media?.media ? './404_cover.jpg' : './no_image_cover.jpg')]} color={file?.media?.media?.coverImage?.color || 'var(--tertiary-color)'} style='height: 100%; object-fit: cover; object-position: center;'/>
     </div>
     <div class='file-content z-10 w-full'>
         <div class='d-flex'>
@@ -204,14 +205,6 @@
     .line-clamp-2 {
         line-height: 1.2;
         -webkit-line-clamp: 2;
-    }
-    .hero-img {
-        border-radius: .75rem;
-    }
-    .file-icon {
-        height: 100%;
-        object-fit: cover;
-        object-position: center;
     }
     .file-icon-container {
         width: 6rem !important;

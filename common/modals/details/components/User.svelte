@@ -9,6 +9,7 @@
   import { since, capitalize, fadeIn, fadeOut } from '@/modules/util.js'
   import { click, hover, focus } from '@/modules/lib/click.js'
   import { copyToClipboard } from '@/modules/lib/clipboard.js'
+  import { getAvatar } from '@/modules/util.js'
   import { COMMON } from '@/modules/bridge.js'
 
   export let user = {}
@@ -43,7 +44,7 @@
 <div class='popover h-50 w-50 d-inline-block not-reactive rounded-circle {$$restProps.class}' style={style} use:hover={handleHover} use:focus={(state) => activePopover.set(state ? user.id : null)}>
   <button class='avatar h-50 w-50 align-items-center justify-content-center p-0 rounded-circle bg-dark-light overflow-hidden pointer not-reactive flex-shrink-0' tabindex='-1' style='border: .3rem solid hsla(var(--dark-color-hsl), 0.9);'>
     {#if avatar}
-      <SmartImage class='w-full h-full cover-img' images={[avatar, './404_square.png']}/>
+      <SmartImage class='w-full h-full cover-img' images={[avatar, `./${getAvatar(user.id)}`]}/>
     {:else}
       <div class='align-items-center justify-content-center font-weight-bold text-white font-size-16'>{initials(user.name)}</div>
     {/if}
@@ -56,13 +57,13 @@
       <div class='popover-card'>
         <div class='position-relative h-140 p-5 d-flex align-items-end'>
           {#if user.bannerImage}
-            <SmartImage class='position-absolute h-full w-full cover-img opacity-55 inset-0' images={[user.bannerImage, './404_banner.png']}/>
+            <SmartImage class='position-absolute h-full w-full cover-img opacity-55 inset-0' images={[user.bannerImage]}/>
           {/if}
           <div class='top-inner d-flex align-items-end w-full z-2'>
             <div role='button' class='rounded-circle' class:pointer={user.siteUrl} data-toggle='{user.siteUrl ? `tooltip` : ``}' data-placement='top-left' data-title='Share to Clipboard' tabindex='-1' use:click={() => copyToClipboard(user.siteUrl, 'user URL')} on:contextmenu|preventDefault={() => { if (user.siteUrl) COMMON.openURI(user.siteUrl) }}>
               <div class='h-80 w-80 rounded-circle overflow-hidden flex-shrink-0' style='border: .4rem solid hsla(var(--gray-color-hsl), 0.15); clip-path: circle(50% at 50% 50%)'>
                 {#if avatar}
-                  <SmartImage class='w-full h-full cover-img' images={[avatar, './404_square.png']}/>
+                  <SmartImage class='w-full h-full cover-img' images={[avatar, `./${getAvatar(user.id)}`]}/>
                 {:else}
                   <div class='w-full h-full d-flex align-items-center justify-content-center font-weight-bold text-white bg-dark-light font-size-22'>{initials(user.name)}</div>
                 {/if}
