@@ -1,5 +1,4 @@
 import { cache, caches } from '@/modules/cache.js'
-import { getKitsuMappings } from '@/modules/anime/anime.js'
 import { codes, getRandomInt, sleep, isValidNumber } from '@/modules/util.js'
 import { printError, status, isOffline } from '@/modules/networking.js'
 import Bottleneck from 'bottleneck'
@@ -37,9 +36,9 @@ class Episodes {
     async getEpisodeData(idMal) {
         if (!idMal) return []
         let page = 1
-        const res = await this.requestEpisodes(true, idMal, page)
+        const res = await this.requestEpisodes(idMal, page)
         if (res && res.pagination?.has_next_page && res.pagination?.last_visible_page) {
-            const lastRes = await this.requestEpisodes(true, idMal, res.pagination.last_visible_page * 100)
+            const lastRes = await this.requestEpisodes(idMal, res.pagination.last_visible_page * 100)
             const arr = lastRes?.data?.map(e => ({
                 filler: e.filler,
                 recap: e.recap,
@@ -61,7 +60,7 @@ class Episodes {
 
     async getSingleEpisode(idMal, episode) {
         if (!idMal) return []
-        const res = await this.requestEpisodes(true, idMal, Number(episode || 1) !== 0 ? (episode || 1) : 1)
+        const res = await this.requestEpisodes(idMal, Number(episode || 1) !== 0 ? (episode || 1) : 1)
         const singleEpisode = res?.data?.find(e => (e.mal_id === episode) || (e.mal_id === Number(episode || 1)))
         return singleEpisode ? {
             filler: singleEpisode.filler,
@@ -72,18 +71,18 @@ class Episodes {
         } : []
     }
 
-    async getKitsuEpisodes(id) {
-        const mappings = await getKitsuMappings(id)
-        const kitsuId = mappings?.data?.[0]?.relationships?.data?.id || mappings?.included?.[0]?.id
-        if (kitsuId) {
-            return this.requestEpisodes(false, kitsuId, 1)
-        }
-        return null
-    }
+    // async getKitsuEpisodes(id) {
+    //     const mappings = await getKitsuMappings(id)
+    //     const kitsuId = mappings?.data?.[0]?.relationships?.data?.id || mappings?.included?.[0]?.id
+    //     if (kitsuId) {
+    //         return this.requestEpisodes(false, kitsuId, 1)
+    //     }
+    //     return null
+    // }
 
     async getMedia(idMal) {
         if (!idMal) return []
-        return this.requestEpisodes(true, idMal, 1, true)
+        return this.requestEpisodes(idMal, 1, true)
     }
 
     handleArray(episodes, fileName) {
@@ -94,7 +93,7 @@ class Episodes {
         return null
     }
 
-    async requestEpisodes(jikan, id, episode, root) {
+    async requestEpisodes(id, episode, root) {
         const page = Math.ceil(episode / 100)
         const cachedEntry = cache.cachedEntry(caches.QUERY_EPISODES, `${id}:${page}:${root}`, status.value === 'offline')
         if (cachedEntry) return cachedEntry
@@ -105,7 +104,8 @@ class Episodes {
             debug(`Fetching Episode ${episode} for ${id} with Page ${page}`)
             let res = {}
             try {
-                res = await fetch(jikan ? `https://api.jikan.moe/v4/anime/${id}${!root ? `/episodes?page=${page}` : ``}` : `https://kitsu.app/api/edge/anime/${id}/episodes`)
+                res = await fetch(`https://api.jikan.moe/v4/anime/${id}${!root ? `/episodes?page=${page}` : ``}`)
+                // res = await fetch(jikan ? `https://api.jikan.moe/v4/anime/${id}${!root ? `/episodes?page=${page}` : ``}` : `https://kitsu.app/api/edge/anime/${id}/episodes`)
             } catch (e) {
                 if (!res || res.status !== 404) throw e
             }
@@ -116,15 +116,15 @@ class Episodes {
             try {
                 json = await res.json()
             } catch (error) {
-                if (res.ok) this.checkError(error, `${jikan ? 'jikan' : 'kitsu'}`)
+                if (res.ok) this.checkError(error)
             }
             if (!res.ok) {
                 if (json) {
                     for (const error of json?.errors || []) {
-                        this.checkError(error, `${jikan ? 'jikan' : 'kitsu'}`, true)
+                        this.checkError(error, true)
                     }
                 } else {
-                    this.checkError(res, `${jikan ? 'jikan' : 'kitsu'}`)
+                    this.checkError(res)
                 }
             }
             return cache.cacheEntry(caches.QUERY_EPISODES, `${id}:${page}:${root}`, {}, json, Date.now() + getRandomInt(1, 3) * 24 * 60 * 60 * 1000)
@@ -141,12 +141,12 @@ class Episodes {
         return requestPromise
     }
 
-    checkError(error, type, silent) {
+    checkError(error, silent) {
         if (!error || error.status === 404 || error.status === 521) {  // api is likely down, we don't need to spam the user with toasts.
             debug(`Error (API Down): ${error.status || 429} - ${error.message || codes[error.status || 429]}`)
             return
         }
-        if (!silent) printError('Episode Fetching Failed', `Failed to fetch ${type} anime episodes!`, error)
+        if (!silent) printError('Episode Fetching Failed', `Failed to fetch jikan anime episodes!`, error)
     }
 }
 

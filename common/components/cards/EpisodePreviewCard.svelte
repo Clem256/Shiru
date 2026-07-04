@@ -93,18 +93,10 @@
           {anilistClient.title(media) || data.parseObject.anime_title}
         </div>
         {#if data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
-          <div class='font-size-12 title overflow-hidden' title={data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp} class:text-muted={!isSpoiler || !['strict', 'hermit'].includes($settings.spoilers)} class:text-spoiler={isSpoiler && ['strict', 'hermit'].includes($settings.spoilers)}>
-            {data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
+          {@const ep_title = data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
+          <div class='font-size-12 title overflow-hidden' title={ep_title} class:text-muted={!isSpoiler || !['strict', 'hermit'].includes($settings.spoilers)} class:text-spoiler={isSpoiler && ['strict', 'hermit'].includes($settings.spoilers)}>
+            {ep_title}
           </div>
-        {:else if data.episode != null}
-          {@const episode = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
-          {#await episodesList.getKitsuEpisodes(media?.id) then mappings}
-            {@const kitsuMappings = episode != null && mappings?.data?.find(ep => ep?.attributes?.number === Number(episode) || episode)?.attributes}
-            {@const ep_title =  kitsuMappings?.titles?.en_us || kitsuMappings?.titles?.en_jp || ''}
-            <div class='font-size-12 title overflow-hidden' title={ep_title} class:text-muted={!isSpoiler || !['strict', 'hermit'].includes($settings.spoilers)} class:text-spoiler={isSpoiler && ['strict', 'hermit'].includes($settings.spoilers)}>
-              {ep_title}
-            </div>
-          {/await}
         {/if}
       </div>
       <div class='col-auto d-flex flex-column align-items-end text-right mt-3' title={data.parseObject?.file_name} >
@@ -154,12 +146,6 @@
     <div class='w-full description overflow-hidden pt-15' class:text-muted={!isSpoiler || !['moderate', 'strict', 'hermit'].includes($settings.spoilers)} class:text-spoiler={isSpoiler && ['strict', 'hermit'].includes($settings.spoilers)}>
       {#if data.episodeData?.summary || data.episodeData?.overview}
         {(data.episodeData?.summary || data.episodeData?.overview).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
-      {:else if data.episode != null}
-        {@const episode = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
-        {#await episodesList.getKitsuEpisodes(media?.id) then mappings}
-          {@const kitsuMappings = data.episode != null && mappings?.data?.find(ep => ep?.attributes?.number === isValidNumber(episode) ? Number(episode) : episode)?.attributes}
-          {(kitsuMappings?.synopsis || kitsuMappings?.description || media?.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
-        {/await}
       {:else}
         {(media?.description || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()}
       {/if}

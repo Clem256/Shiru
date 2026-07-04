@@ -1,7 +1,6 @@
 <script>
   import { Building2, Earth, Adult, FolderKanban, Languages, CalendarRange, MonitorPlay, Type } from 'lucide-svelte'
-  import { getKitsuMappings } from '@/modules/anime/anime.js'
-  import { seasons } from '@/modules/providers/anilist/anilist.js'
+  import { currentYear } from '@/modules/providers/anilist/anilist.js'
 
   export let media = null
   export let alt = null
@@ -57,11 +56,9 @@
       studio = ((await alt)?.data?.Media || media)?.studios?.nodes?.map(node => node.name)?.[0] // sometimes this can still be wrong, so we just get the first studio in the list and assume that's correct.
       return studio
     } else if (property === 'season') {
-      const details = await (((media.season || media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id))
-      const attributes = details?.included?.[0]?.attributes
-      const seasonYear = details.seasonYear || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear())
-      const season = (details.season || seasonYear && seasons[Math.floor((((attributes?.startDate && new Date(attributes?.startDate).getMonth()) || (attributes?.createdAt && new Date(attributes?.createdAt).getMonth())) / 12) * 4) % 4])?.toLowerCase()
-      seasonal = (season || seasonYear) ? [season, seasonYear].filter(f => f).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
+      const seasonYear = media.seasonYear || media.startDate?.year || (media.status === 'RELEASING' && currentYear)
+      const season = media.season?.toLowerCase()
+      seasonal = (season || seasonYear) ? [season, seasonYear].filter(s => s).join(' ') : (media.status === 'NOT_YET_RELEASED') ? 'In Production' : null
       return seasonal
     }
     return media[property]

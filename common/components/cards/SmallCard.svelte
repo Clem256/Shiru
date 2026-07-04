@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import PreviewCard from '@/components/cards/PreviewCard.svelte'
-  import { airingAt, getAiringInfo, getKitsuMappings, formatMap, statusColorMap } from '@/modules/anime/anime.js'
+  import { airingAt, getAiringInfo, formatMap, statusColorMap } from '@/modules/anime/anime.js'
   import { createListener } from '@/modules/util.js'
   import { hoverClick } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
@@ -148,10 +148,7 @@
     <div class='d-flex flex-row mt-auto font-weight-medium justify-content-between w-full text-muted'>
       <div class='d-flex align-items-center pr-5'>
         <CalendarDays class='pr-5' size='2.6rem' />
-        {#await ((media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id) then details}
-          {@const attributes = details?.included?.[0]?.attributes}
-          <span class='line-height-1'>{details.seasonYear || ((media.status === 'NOT_YET_RELEASED') && 'TBA') || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear()) || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
-        {/await}
+        <span class='line-height-1'>{media.seasonYear || media.startDate?.year || (media.status === 'NOT_YET_RELEASED' && 'TBA') || (media.status === 'RELEASING' && currentYear) || 'N/A'}</span>
       </div>
       <div class='d-flex align-items-center text-nowrap text-right'>
         <span class='line-height-1'>{formatMap[media.format]}</span>

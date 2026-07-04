@@ -1,10 +1,10 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { airingAt, getAiringInfo, formatMap, getKitsuMappings, getMediaMaxEp, statusColorMap } from '@/modules/anime/anime.js'
+  import { airingAt, getAiringInfo, formatMap, getMediaMaxEp, statusColorMap } from '@/modules/anime/anime.js'
   import { click } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
-  import { anilistClient, seasons } from '@/modules/providers/anilist/anilist.js'
+  import { anilistClient, currentYear } from '@/modules/providers/anilist/anilist.js'
   import { settings } from '@/modules/settings.js'
   import { mediaCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
@@ -84,21 +84,15 @@
                   Rated 18+
                 </span>
             {/if}
-            {#await ((media.season || media.seasonYear || (media.status === 'NOT_YET_RELEASED')) && media) || getKitsuMappings(media.id) then details}
-              {@const attributes = details?.included?.[0]?.attributes}
-              {@const seasonYear = details.seasonYear || (attributes?.startDate && new Date(attributes?.startDate).getFullYear()) || (attributes?.createdAt && new Date(attributes?.createdAt).getFullYear())}
-              {@const season = (details.season || seasonYear && seasons[Math.floor((((attributes?.startDate && new Date(attributes?.startDate).getMonth()) || (attributes?.createdAt && new Date(attributes?.createdAt).getMonth())) / 12) * 4) % 4])?.toLowerCase()}
-              {#if season || seasonYear || (media.status === 'NOT_YET_RELEASED')}
-                <span class='badge pl-5 pr-5'>
-                  {(season || seasonYear) ? [season, seasonYear].filter(s => s).join(' ') : 'In Production'}
-                </span>
-              {/if}
-              {#if !season && !seasonYear && (media.status === 'NOT_YET_RELEASED')}
-                <span class='badge pl-5 pr-5'>
-                  Not Released
-                </span>
-              {/if}
-            {/await}
+            {#if media.season || media.seasonYear || media.startDate?.year || media.status === 'RELEASING'}
+              <span class='badge pl-5 pr-5 font-scale-14'>
+                {[media.season?.toLowerCase(), (media.seasonYear || media.startDate?.year || currentYear)].filter(s => s).join(' ')}
+              </span>
+            {:else if media.status === 'NOT_YET_RELEASED'}
+              <span class='badge pl-5 pr-5 font-scale-14'>
+                Not Released
+              </span>
+            {/if}
             {#if media.averageScore}
               {#if (!hasSpoiler || !['strict', 'hermit'].includes($settings.spoilers))}
                 <span class='badge pl-5 pr-5'>{media.averageScore + '%'} Rating</span>

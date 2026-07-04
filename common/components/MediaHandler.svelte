@@ -9,7 +9,7 @@
   import { mediaCache } from '@/modules/cache.js'
   import { episodesList } from '@/modules/episodes.js'
   import { settings } from '@/modules/settings.js'
-  import { getAniMappings, getKitsuMappings, hasZeroEpisode } from '@/modules/anime/anime.js'
+  import { getAniMappings, hasZeroEpisode } from '@/modules/anime/anime.js'
   import Debug from 'debug'
   const debug = Debug('ui:mediahandler')
 
@@ -152,10 +152,10 @@
           }
         const { episodes, specialCount, episodeCount } = mappings
         let mappingsTitle = episode && episodes && episodes[Number(episode)]?.title?.en
-        if (episode && (!mappingsTitle || mappingsTitle.length === 0)) {
-          const kitsuMappings = (await getKitsuMappings(media?.id))?.data?.find(ep => ep?.attributes?.number === Number(episode))?.attributes
-          mappingsTitle = kitsuMappings?.titles?.en_us || kitsuMappings?.titles?.en_jp || (episodes && episodes[Number(episode)]?.title?.jp)
-        }
+        // if (episode && (!mappingsTitle || mappingsTitle.length === 0)) {
+        //   const kitsuMappings = (await getKitsuMappings(media?.id))?.data?.find(ep => ep?.attributes?.number === Number(episode))?.attributes
+        //   mappingsTitle = kitsuMappings?.titles?.en_us || kitsuMappings?.titles?.en_jp || (episodes && episodes[Number(episode)]?.title?.jp)
+        // }
         const needsValidation = !(!specialCount || (media?.episodes === episodeCount && episodes && episodes[Number(episode)]))
         streamingEpisode = (!needsValidation && mappingsTitle && episodeRx.exec(`Episode ${Number(episode)} - ` + mappingsTitle)) ? {title: (`Episode ${Number(episode)} - ` + mappingsTitle)} : (needsValidation && media?.status === 'FINISHED') ? {title: (`Episode ${Number(episode)} - ` + (mappingsTitle || `Episode ${Number(episode)}`))} : streamingTitle
         if (!streamingEpisode || !episodeRx.exec(streamingEpisode.title) || episodeRx.exec(streamingEpisode.title)[2].toLowerCase()?.trim()?.startsWith('episode')) {

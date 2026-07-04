@@ -105,7 +105,7 @@ async function getManifest(urls, updateCheck = false) {
       if (/^[A-Z]:/.test(url) || url.startsWith('file:') || url.startsWith('extension:')) {
         const localeURL = (url.startsWith('extension:') ? url.replace(/^extension:/, 'file:') : url.startsWith('file:') ? url.replace(/^file:(?!\/{3})/, 'file:///') : `file:///${url.replace(/\\/g, '/')}`).replace(/^file:\/+/, 'file:///')
         const manifest = await (await fetch(localeURL + (!/\.json(\?|$)/i.test(localeURL) ? `${localeURL.endsWith('/') ? '' : '/'}index.json` : ''))).json()
-        const basePath = url.replace(/^extension:/, '').replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^[\/]+/, '').replace(/[^/]+\.json$/, '')
+        const basePath = url.replace(/^extension:/, '').replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/[^/]+\.json$/, '')
         for (const source of manifest) {
           if (source?.id) source.locale = `extension://${basePath.endsWith('/') ? basePath.slice(0, -1) : basePath}`
         }
@@ -328,7 +328,7 @@ class ExtensionManager {
   }
 
   /** Terminates all workers and reloads extensions. */
-  reloadExtensions() {
+  async reloadExtensions() {
     Object.values(this.activeWorkers.value).forEach(worker => worker.terminate())
     Object.values(this.inactiveWorkers.value).forEach(worker => worker.terminate())
     this.#pendingWorkers.forEach(worker => worker.terminate())
@@ -336,7 +336,7 @@ class ExtensionManager {
     this.activeWorkers.set({})
     this.inactiveWorkers.set({})
     this.whenReady = createDeferred()
-    this.loadExtensions(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})
+    await this.loadExtensions(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})
     debug(`Extensions have been reloaded`)
   }
 
@@ -572,7 +572,7 @@ class ExtensionManager {
             const worker = createWorker(extension)
             if (SUPPORTS.isAndroid) worker.onmessage = async (event) => this.portMessage(event, worker) // hacky Android workaround for Access-Control-Allow-Origin error.
             try {
-              /** @type {comlink.Remote<import('@/modules/extensions/worker.js').Worker>} */
+              /** @type {RemoteObject<Promise<comlink.Remote<import('@/modules/extensions/worker.js').Worker>>> & ProxyMethods} */
               const remoteWorker = await wrap(worker)
               this.#pendingWorkers.set(key, remoteWorker)
               const initialize = await remoteWorker.initialize(key, extension.type, modules[key], { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })

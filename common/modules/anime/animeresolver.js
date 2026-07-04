@@ -182,7 +182,7 @@ export default new class AnimeResolver {
       }
     }
 
-    if (missingTitles?.length > 0) debug(`Missing ${missingTitles?.length} titles as they were not found in the media cache, titles: ${missingTitles?.map(obj => obj.title).join(', ')}`)
+    if (missingTitles?.length > 0) debug(`Missing ${missingTitles?.length} titles as they were not found in the media cache, titles: ${missingTitles?.map(obj => `${obj.title} (year: ${obj.year ?? 'N/A'}, isAdult: ${obj.isAdult})`).join(', ')}`)
     for (const chunk of chunks(missingTitles, 55)) {
       // single title has a complexity of 8.1, al limits complexity to 500, so this can be at most 62, undercut it to ~~60~~ 55, al pagination is 50, but at most we'll do 30 titles since isAdult duplicates each title
       let search

@@ -177,12 +177,6 @@
         <div class='font-size-12 title overflow-hidden' class:text-muted={!isSpoiler || !['strict', 'hermit'].includes($settings.spoilers)} class:text-spoiler={isSpoiler && ['strict', 'hermit'].includes($settings.spoilers)}>
           {#if data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
             {data.episodeData?.title?.en || data.episodeData?.title?.['x-jat'] || data.episodeData?.title?.ja || data.episodeData?.title?.jp}
-          {:else if data.episode}
-            {@const episode = (data.episodeRange || data.parseObject?.episodeRange)?.first || episodeRange?.first || data.episode}
-            {#await episodesList.getKitsuEpisodes(media?.id) then mappings}
-              {@const kitsuMappings = episode != null && mappings?.data?.find(ep => ep?.attributes?.number === isValidNumber(episode) ? Number(episode) : episode)?.attributes}
-              {kitsuMappings?.titles?.en_us || kitsuMappings?.titles?.en_jp || ''}
-            {/await}
           {/if}
         </div>
       </div>
