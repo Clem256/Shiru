@@ -6,6 +6,7 @@
   import { getEpisodeMetadataForMedia, getKitsuMappings } from '@/modules/anime/anime.js'
   import { copyToClipboard } from '@/modules/lib/clipboard.js'
   import { malDubs } from '@/modules/anime/animedubs.js'
+  import { settings } from '@/modules/settings.js'
   import { Database, BadgeCheck, HardDrive, FileQuestion, AlertCircle, TriangleAlert } from 'lucide-svelte'
 
   const { reactive, init } = createListener(['torrent-button', 'torrent-safe-area'])
@@ -348,6 +349,9 @@
   export let type = 'default'
   export let countdown = -1
 
+  const hasSpoiler = $settings.spoilerStatus.includes(media?.mediaListEntry?.status ?? 'NOTONLIST')
+  const isSpoiler = hasSpoiler && (media?.mediaListEntry?.progress ?? 0) < episode
+
   $: errorType = type === 'error' ? (result.title?.match(/no results/i) || result.title?.match(/extension is not enabled/i) ? 'warning' : 'error') : ''
 
   let card
@@ -370,7 +374,7 @@
   <div class='position-absolute top-0 left-0 w-full h-full'>
     <div class='position-absolute w-full h-full overflow-hidden rounded-3 error-overlay z-5 pointer-events-none' class:d-none={type !== 'error'}/>
     <div class='position-absolute w-full h-full overflow-hidden rounded-3' class:image-border={type === 'default'} >
-      <SmartImage class='img-cover w-full h-full' images={[
+      <SmartImage class='img-cover w-full h-full {isSpoiler ? `blur-6` : ``}' images={[
         () => getEpisodeMetadataForMedia(media).then(metadata => metadata?.[episode]?.image),
           media.bannerImage,
           ...(media.trailer?.id ? [
