@@ -1,5 +1,6 @@
 <script>
   import { page as _page, modal as _modal } from '@/modules/navigation.js'
+  import { nowPlaying } from '@/components/MediaHandler.svelte'
   import { click as _click } from '@/modules/lib/click.js'
   import { settings } from '@/modules/settings.js'
   import { onMount } from 'svelte'
@@ -31,7 +32,7 @@
   /** @type {boolean} */
   $: expandableSidebar = sidebar && $settings.expandingSidebar
   /** @type {boolean} */
-  $: active = (!modal ? ((!$_modal || !_modal.length) && $_page === page) : modal === _modal.focused) || $$restProps.class?.match('active')
+  $: active = (!modal ? ((!$_modal || !_modal.length) && $_page === page) : modal === _modal.focused && (modal !== _modal.ANIME_DETAILS || ($_modal[_modal.ANIME_DETAILS]?.data?.id === $nowPlaying?.media?.id))) || $$restProps.class?.match('active')
 
   onMount(() => useHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches)
 </script>
