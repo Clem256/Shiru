@@ -86,7 +86,7 @@ export async function getTorrentResults({ media, episode, batch, movie, resoluti
 async function queryExtensions(type, options, queryTypes, processResults) {
   await extensionManager.whenReady.promise
   const promises = new Map()
-  const extensionSources = cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}
+  const extensionSources = cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}
   const allExtensionKeys = Object.keys(extensionSources)
   if (!allExtensionKeys.length) {
     debug(status.value !== 'offline' ? `No ${type} sources configured` : `Detected ${type} sources but they are inactive`)

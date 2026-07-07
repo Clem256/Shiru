@@ -780,6 +780,16 @@ export const historyDefaults = {
 }
 
 /**
+ * @typedef {Object} ExtensionDefaults
+ * @property {any} [extensionSources]
+ * @property {any} [repositorySources]
+ */
+export const extensionDefaults = {
+  extensionSources: undefined,
+  repositorySources: undefined
+}
+
+/**
  * @typedef {Object} NotifyDefaults
  * @property {Record<string, any>} lastRSS
  * @property {number} lastAni

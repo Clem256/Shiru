@@ -194,7 +194,7 @@ class ExtensionManager {
     let sources = null
     debug('Loading extensions from sources...')
     settings.subscribe(() => {
-      const newSources = cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}
+      const newSources = cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}
       const sourcesOld = Object.keys(sources || {})
       const sourcesNew = Object.keys(newSources)
       if ((!sourcesOld?.length && !sourcesNew?.length) || !(sourcesOld.length === sourcesNew.length && sourcesOld.every(key => sourcesNew.includes(key)))) {
@@ -203,9 +203,9 @@ class ExtensionManager {
         else if (sourcesNew.length) {
           sources = structuredClone(newSources)
           this.whenReady = createDeferred()
-          this.updateExtensions(newSources, cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources') || {}).then(update => this.loadExtensions(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') ?? newSources, update)).catch(error => {
+          this.updateExtensions(newSources, cache.getEntry(caches.EXTENSIONS, 'repositorySources') || {}).then(update => this.loadExtensions(cache.getEntry(caches.EXTENSIONS, 'extensionSources') ?? newSources, update)).catch(error => {
             printError('Failed to Update Extensions', 'Unable to check for updates or update extensions.', error)
-            return this.loadExtensions(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') ?? newSources, false)
+            return this.loadExtensions(cache.getEntry(caches.EXTENSIONS, 'extensionSources') ?? newSources, false)
           })
           debug('Found new sources and updated...', JSON.stringify(newSources))
         }
@@ -301,11 +301,11 @@ class ExtensionManager {
    * @throws {Error} If the extension fails validation or initialization.
    */
   async getExtensionCode(key, worker) {
-    const extension = (cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})[key]
+    const extension = (cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {})[key]
     let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => !main || VALID_SCHEMES.test(main) ? main : `${extension?.locale || [extension?.update].flat()[0]}/${main}`))
     if (newCode && typeof newCode === 'string' && newCode.trim().length > 0) {
       if (!extension.locale) {
-        await cache.cacheEntry(caches.QUERY_EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
+        await cache.cacheEntry(caches.EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
         try {
           if (this.#pendingWorkers.get(key) !== worker && this.activeWorkers.value[key] !== worker && this.inactiveWorkers.value[key] !== worker) return
           const initialize = await worker.initialize(key, extension.type, newCode, { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })
@@ -336,7 +336,7 @@ class ExtensionManager {
     this.activeWorkers.set({})
     this.inactiveWorkers.set({})
     this.whenReady = createDeferred()
-    await this.loadExtensions(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})
+    await this.loadExtensions(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {})
     debug(`Extensions have been reloaded`)
   }
 
@@ -375,7 +375,7 @@ class ExtensionManager {
    */
   async enableExtension(key) {
     if (this.activeWorkers.value[key] || this.loadingExtensions.has(key)) return
-    const extension = (cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {})[key]
+    const extension = (cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {})[key]
     if (!extension) return
     debug(`Enabling extension ${key}`)
     await this.loadExtensions({ [key]: extension }, false)
@@ -402,7 +402,7 @@ class ExtensionManager {
    * @param {string} extensionId The extension identifier.
    */
   async removeSource(extensionId) {
-    const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
+    const extensionSources = { ...(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}) }
     for (const [_key, source] of Object.entries(extensionSources)) {
       if ([source.update].flat()[0] === extensionId) {
         const key = getKey(source)
@@ -420,11 +420,11 @@ class ExtensionManager {
           })
         }
         delete extensionSources[_key]
-        cache.deleteEntry(caches.QUERY_EXTENSIONS, _key).catch(error => debug('Failed to delete cache entry for removed source:', error))
+        cache.deleteEntry(caches.EXTENSIONS, _key).catch(error => debug('Failed to delete cache entry for removed source:', error))
       }
     }
-    const removedKeys = Object.keys(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}).filter(key => !(key in extensionSources))
-    cache.setEntry(caches.QUERY_EXTENSIONS, 'extensionSources', extensionSources)
+    const removedKeys = Object.keys(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}).filter(key => !(key in extensionSources))
+    cache.setEntry(caches.EXTENSIONS, 'extensionSources', extensionSources)
     settings.update(value => {
       const extensionsNew = { ...value.extensionsNew }
       for (const _key of removedKeys) delete extensionsNew[_key]
@@ -450,10 +450,10 @@ class ExtensionManager {
         }
         if (config.every(entry => entry?.main && !entry?.update)) { // source repository manifests
           const normalizedUrl = normalizeUrl(url)
-          const repositorySources = cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources') || {}
+          const repositorySources = cache.getEntry(caches.EXTENSIONS, 'repositorySources') || {}
           const current = repositorySources[normalizedUrl]
           if (JSON.stringify(current) !== JSON.stringify(config)) {
-            cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', { ...repositorySources, [normalizedUrl]: config })
+            cache.setEntry(caches.EXTENSIONS, 'repositorySources', { ...repositorySources, [normalizedUrl]: config })
             debug(`Stored new source repository: ${normalizedUrl}`)
           } else {
             debug(`Source repository unchanged: ${normalizedUrl}`)
@@ -468,12 +468,12 @@ class ExtensionManager {
               return `Failed to load extension(s) from '${url}': invalid extension format.`
             }
           }
-          const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
+          const extensionSources = { ...(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}) }
           config.forEach(extension => {
             const key = getKey(extension)
             extensionSources[key] = extension
           })
-          cache.setEntry(caches.QUERY_EXTENSIONS, 'extensionSources', extensionSources)
+          cache.setEntry(caches.EXTENSIONS, 'extensionSources', extensionSources)
           settings.update(value => {
             const extensionsNew = { ...value.extensionsNew }
             config.forEach(extension => {
@@ -522,10 +522,13 @@ class ExtensionManager {
    */
   async loadExtensions(extensions, update) {
     const extensionIds = Object.keys(extensions || {})
-    if (!extensionIds?.length) return false
+    if (!extensionIds?.length) {
+      this.whenReady.resolve(true)
+      return false
+    }
     const modules = !update ? Object.fromEntries(await Promise.all(extensionIds.map(async (id) => {
       try {
-        const cachedModule = await cache.cachedEntry(caches.QUERY_EXTENSIONS, getKey(extensions[id]), true)
+        const cachedModule = await cache.cachedEntry(caches.EXTENSIONS, getKey(extensions[id]), true)
         if (!cachedModule || (typeof cachedModule === 'string' && cachedModule.trim().length === 0)) {
           debug(`Cached module for ${id} is invalid, will refetch`)
           return null
@@ -545,7 +548,7 @@ class ExtensionManager {
           let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => !main || VALID_SCHEMES.test(main) ? main : `${extension?.locale || [extension?.update].flat()[0]}/${main}`))
           if (newCode && typeof newCode === 'string' && newCode.trim().length > 0) {
             if (!extension.locale) {
-              modules[key] = await cache.cacheEntry(caches.QUERY_EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
+              modules[key] = await cache.cacheEntry(caches.EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
               if (!modules[key]) {
                 debug(`Cache write failed for ${key}, using code directly`)
                 modules[key] = newCode
@@ -553,10 +556,10 @@ class ExtensionManager {
             } else modules[key] = newCode
           } else {
             debug(`Failed to fetch extension ${key}, attempting to use cached version`)
-            modules[key] = await cache.cachedEntry(caches.QUERY_EXTENSIONS, key, true)
+            modules[key] = await cache.cachedEntry(caches.EXTENSIONS, key, true)
             if (!modules[key] || (typeof modules[key] === 'string' && modules[key].trim().length === 0)) {
               debug(`No valid cache fallback for ${key}, skipping extension`)
-              await cache.deleteEntry(caches.QUERY_EXTENSIONS, key).catch(error => debug('Failed to delete empty cache entry:', error))
+              await cache.deleteEntry(caches.EXTENSIONS, key).catch(error => debug('Failed to delete empty cache entry:', error))
               return
             }
           }
@@ -634,11 +637,11 @@ class ExtensionManager {
       const repositoryManifest = await getManifest(url, true)
       if (!repositoryManifest || !Array.isArray(repositoryManifest) || !repositoryManifest.every(entry => entry?.main && !entry?.update)) return 0
       const normalizedUrl = normalizeUrl(url)
-      const repositorySources = cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources') || {}
+      const repositorySources = cache.getEntry(caches.EXTENSIONS, 'repositorySources') || {}
       if (JSON.stringify(repositorySources[normalizedUrl]) !== JSON.stringify(repositoryManifest)) {
         const existingMains = new Set((repositorySources[normalizedUrl] || []).map(entry => entry.main))
         const newCount = repositoryManifest.filter(entry => !existingMains.has(entry.main)).length
-        cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', { ...repositorySources, [normalizedUrl]: repositoryManifest })
+        cache.setEntry(caches.EXTENSIONS, 'repositorySources', { ...repositorySources, [normalizedUrl]: repositoryManifest })
         debug(`Source repository updated: ${normalizedUrl}`)
         return newCount
       }
@@ -717,13 +720,13 @@ class ExtensionManager {
             debug('Failed to terminate active workers during update')
           }
         })
-        const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
+        const extensionSources = { ...(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}) }
         toUpdate.forEach(({ oldId, latest }) => {
           const newId = getKey(latest)
           extensionSources[newId] = latest
           if (newId !== oldId) delete extensionSources[oldId]
         })
-        cache.setEntry(caches.QUERY_EXTENSIONS, 'extensionSources', extensionSources)
+        cache.setEntry(caches.EXTENSIONS, 'extensionSources', extensionSources)
         settings.update((value) => {
           const extensionsNew = { ...value.extensionsNew }
           toUpdate.forEach(({ oldId, latest }) => {
@@ -750,12 +753,12 @@ class ExtensionManager {
       const toAdd = latestValid.filter(config => !existingIds.has(config.id))
       if (toAdd.length) {
         debug(`Found ${toAdd.length} new extensions to add:`, toAdd.map(extension => extension.id))
-        const extensionSources = { ...(cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources') || {}) }
+        const extensionSources = { ...(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}) }
         toAdd.forEach(extension => {
           const key = getKey(extension)
           extensionSources[key] = extension
         })
-        cache.setEntry(caches.QUERY_EXTENSIONS, 'extensionSources', extensionSources)
+        cache.setEntry(caches.EXTENSIONS, 'extensionSources', extensionSources)
         settings.update((value) => {
           const extensionsNew = { ...value.extensionsNew }
           toAdd.forEach(extension => {

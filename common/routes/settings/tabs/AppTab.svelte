@@ -63,6 +63,7 @@
   import { resetNotifications } from '@/modules/notification/manager.js'
   import ChangelogTab from '@/routes/settings/tabs/ChangelogTab.svelte'
   import ConfirmButton from '@/components/inputs/ConfirmButton.svelte'
+  import { extensionManager } from '@/modules/extensions/manager.js'
   import { modal } from '@/modules/navigation.js'
   import { copyToClipboard } from '@/modules/lib/clipboard.js'
   import semver from 'semver'
@@ -163,7 +164,17 @@
     <span class='text-truncate'>Reset History</span>
   </ConfirmButton>
 </SettingCard>
-<SettingCard title='Reset Caches' description='Resets everything the app has cached, this is not recommended unless you are experiencing issues. Caching speeds up load times and decreases down time. This does not reset the notifications or history cache. THIS WILL FORCE RESTART THE APP!'>
+<SettingCard title='Reset Extensions' description='Resets extension data that has been cached. The code reset will remove and refetched new code on next load, while the full reset permanently removes all added extensions. RESET CODE WILL FORCE RESTART THE APP!'>
+  <div class='d-inline-flex flex-column mb-5'>
+    <ConfirmButton click={() => cache.resetExtensions()} class='btn btn-primary d-flex align-items-center justify-content-center mt-5' primaryClass='px-30' confirmText='Confirm Code Reset' confirmClass='btn-danger-dim long-button' cancelClass='btn-secondary long-button' actionClass='d-inline-flex d-md-block' dataToggle='tooltip' dataPlacement='top' dataTitle='Clears cached extension code, which will be refetched on next load'>
+      <span class='text-truncate'>Reset Code</span>
+    </ConfirmButton>
+    <ConfirmButton click={() => cache.resetExtensions(false).then(() => extensionManager.reloadExtensions().then(() => toast.success('Extensions Reset', { description: 'All previously added extensions and cached extension data has been successfully been reset!', duration: 5_000 })))} class='btn btn-danger d-flex align-items-center justify-content-center mt-5' primaryClass='px-30' confirmText='Confirm Full Reset' confirmClass='btn-danger-dim long-button' cancelClass='btn-secondary long-button' actionClass='d-inline-flex d-md-block' dataToggle='tooltip' dataPlacement='top' dataTitle='Permanently removes all added extensions and their data'>
+      <span class='text-truncate'>Reset Extensions</span>
+    </ConfirmButton>
+  </div>
+</SettingCard>
+<SettingCard title='Reset Caches' description='Resets everything the app has cached, this is not recommended unless you are experiencing issues. Caching speeds up load times and decreases down time. This does not reset the extensions, notifications or history cache and it does not reset settings. THIS WILL FORCE RESTART THE APP!'>
   <ConfirmButton click={() => cache.resetCaches()} class='btn btn-primary mt-5 d-flex align-items-center justify-content-center' primaryClass='px-30' confirmText='Confirm Reset' confirmClass='btn-danger-dim long-button' cancelClass='btn-secondary long-button' actionClass='d-inline-flex d-md-block' dataToggle='tooltip' dataPlacement='top' dataTitle='Resets All Cached Media And Queries... This Will Cause The App To Restart!'>
     <span class='text-truncate'>Reset Caches</span>
   </ConfirmButton>

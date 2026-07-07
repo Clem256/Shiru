@@ -1,4 +1,4 @@
-import { generalDefaults, historyDefaults, notifyDefaults, isValidNumber, getRandomInt } from './util.js'
+import { generalDefaults, historyDefaults, extensionDefaults, notifyDefaults, isValidNumber, getRandomInt } from './util.js'
 import { writable } from 'simple-store-svelte'
 import equal from 'fast-deep-equal/es6'
 import rfdc from 'rfdc'
@@ -63,9 +63,9 @@ export const caches = Object.freeze({
   QUERY_RECOMMENDATIONS: { key: 'query_recommendations', expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 500 }, // evict after 30 days.
   // SHARED DB
   MEDIA_CACHE: { key: 'medias', shared: true, expiryOffset: 120 * 24 * 60 * 60 * 1_000, maxEntries: 10_000 }, // evict after 120 days.
+  EXTENSIONS: { key: 'extensions', shared: true },
   QUERY_MAPPINGS: { key: 'query_mappings', shared: true, expiryOffset: 120 * 24 * 60 * 60 * 1_000, maxEntries: 5_000 }, // evict after 120 days.
   QUERY_COMPOUND: { key: 'query_compound', shared: true, expiryOffset: 7 * 24 * 60 * 60 * 1_000, maxEntries: 500 }, // evict after 7 days.
-  QUERY_EXTENSIONS: { key: 'query_extensions', shared: true },
   QUERY_EPISODES: { key: 'query_episodes', shared: true, expiryOffset: 60 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 60 days.
   QUERY_SEARCH_IDS: { key: 'query_search_ids', shared: true, expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
   QUERY_SEARCH: { key: 'query_search', shared: true, expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
@@ -445,6 +445,8 @@ class Cache {
   history
   /** @type {import('simple-store-svelte').Writable<NotifyDefaults>} */
   notifications
+  /** @type {import('simple-store-svelte').Writable<ExtensionDefaults>} */
+  extensions
   /** @type {import('simple-store-svelte').Writable<any>} */
   query_notifications
   /** @type {import('simple-store-svelte').Writable<any>} */
@@ -455,8 +457,6 @@ class Cache {
   query_mappings
   /** @type {import('simple-store-svelte').Writable<any>} */
   query_compound
-  /** @type {import('simple-store-svelte').Writable<any>} */
-  query_extensions
   /** @type {import('simple-store-svelte').Writable<any>} */
   query_episodes
   /** @type {import('simple-store-svelte').Writable<any>} */
@@ -651,9 +651,9 @@ class Cache {
       { key: caches.QUERY_RECOMMENDATIONS, writable: (data) => this.query_recommendations = writable(deepClone(data)) },
       // SHARED DB
       { key: caches.MEDIA_CACHE, writable: (data) => mediaCache = writable(deepClone(data)) },
+      { key: caches.EXTENSIONS, writable: (data) => this.extensions = writable({ ...extensionDefaults, ...deepClone(data) }) },
       { key: caches.QUERY_MAPPINGS, writable: (data) => this.query_mappings = writable(deepClone(data)) },
       { key: caches.QUERY_COMPOUND, writable: (data) => this.query_compound = writable(deepClone(data)) },
-      { key: caches.QUERY_EXTENSIONS, writable: (data) => this.query_extensions = writable(deepClone(data)) },
       { key: caches.QUERY_EPISODES, writable: (data) => this.query_episodes = writable(deepClone(data)) },
       { key: caches.QUERY_SEARCH_IDS, writable: (data) => this.query_search_ids = writable(deepClone(data)) },
       { key: caches.QUERY_SEARCH, writable: (data) => this.query_search = writable(deepClone(data)) },
@@ -796,7 +796,7 @@ class Cache {
     this.query_recommendations = null
     this.query_mappings = null
     this.query_compound = null
-    this.query_extensions = null
+    this.extensions = null
     this.query_episodes = null
     this.query_search_ids = null
     this.query_search = null
@@ -848,7 +848,7 @@ class Cache {
    * See {@link generalDefaults} for all values that will be reset.
    */
   async resetSettings() {
-    await reset(this.cacheID, caches.GENERAL)
+    await reset(this.#getDatabase(caches.GENERAL), caches.GENERAL)
     location.reload()
   }
 
@@ -857,8 +857,25 @@ class Cache {
    * See {@link historyDefaults} for all values that will be reset.
    */
   async resetHistory() {
-    await reset(this.cacheID, caches.HISTORY)
+    await reset(this.#getDatabase(caches.HISTORY), caches.HISTORY)
     this.history.value = { ...historyDefaults }
+  }
+
+  /**
+   * Resets extension data, either clearing only cached code or performing a full reset.
+   *
+   * @param {boolean} [codeOnly=true]
+   * See {@link extensionDefaults} for all values that will be reset.
+   */
+  async resetExtensions(codeOnly = true) {
+    if (codeOnly) {
+      const defaultKeys = new Set(Object.keys(extensionDefaults))
+      await remove(this.#getDatabase(caches.EXTENSIONS), caches.EXTENSIONS, Object.keys(this.extensions.value).filter(key => !defaultKeys.has(key)))
+      location.reload()
+    } else {
+      await reset(this.#getDatabase(caches.EXTENSIONS), caches.EXTENSIONS)
+      this.extensions.value = { ...extensionDefaults }
+    }
   }
 
   /**
@@ -868,7 +885,6 @@ class Cache {
   async resetCaches() {
     await reset(this.#getDatabase(caches.USER_LISTS), caches.USER_LISTS)
     await reset(this.#getDatabase(caches.QUERY_COMPOUND), caches.QUERY_COMPOUND)
-    await reset(this.#getDatabase(caches.QUERY_EXTENSIONS), caches.QUERY_EXTENSIONS)
     await reset(this.#getDatabase(caches.QUERY_EPISODES), caches.QUERY_EPISODES)
     await reset(this.#getDatabase(caches.QUERY_FOLLOWING), caches.QUERY_FOLLOWING)
     await reset(this.#getDatabase(caches.QUERY_RECOMMENDATIONS), caches.QUERY_RECOMMENDATIONS)
@@ -920,7 +936,7 @@ class Cache {
    * @throws {Error} If the cache is not one of the supported stores.
    */
   #getStore(cache) {
-    const store = { [caches.GENERAL.key]: this.general, [caches.NOTIFICATIONS.key]: this.notifications, [caches.HISTORY.key]: this.history, [caches.QUERY_EXTENSIONS.key]: this.query_extensions }[cache.key]
+    const store = { [caches.GENERAL.key]: this.general, [caches.NOTIFICATIONS.key]: this.notifications, [caches.HISTORY.key]: this.history, [caches.EXTENSIONS.key]: this.extensions }[cache.key]
     if (!store) throw new Error(`Store: Failed to get unsupported cache ${cache.key}`)
     return store
   }
@@ -974,17 +990,12 @@ class Cache {
    *
    * @param {Array<Object>} medias An array of media objects to be cached. Each media object should have a unique identifier (`id`).
    * @param {Object} [fillLists] An object containing user list data to attach to each media entry (e.g., `{ data: { MediaList: [...] } }`)
-   * @returns {Promise<void>} Resolves when the media cache has been successfully updated.
    */
-  async updateMedia(medias, fillLists) {
+  updateMedia(medias, fillLists) {
     if (!medias || !medias.length) return
     const filledMedias = fillLists ? fillEntries(medias, fillLists) : medias /* attaches any alternative authorization userList information to the anilist media for tracking. */
     const mediaMap = new Map(filledMedias.map(media => [media.id, media]))
     const now = Date.now()
-    if (!this.anilistClient) {
-      const { anilistClient } = await import('@/modules/providers/anilist/anilist.js')
-      this.anilistClient = anilistClient
-    }
     mediaCache.update(current => {
       for (const [id, media] of mediaMap.entries()) {
         if (media) current[id] = { ...media, cachedAt: Date.now(), expiry: media.status === 'FINISHED' ? now + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000 : now + getRandomInt(12, 24) * 60 * 60 * 1_000 }
@@ -1004,6 +1015,10 @@ class Cache {
     if (!id || !isValidNumber(Number(id))) return null
     const exactId = Number(id)
     const media = isMal ? Object.values(mediaCache.value).find(media => media.idMal === exactId) : mediaCache.value[id]
+    if (!this.anilistClient) {
+      const { anilistClient } = await import('@/modules/providers/anilist/anilist.js')
+      this.anilistClient = anilistClient
+    }
     if (media) return media
     if (isMal) return (await this.anilistClient.searchIDSingle({ idMal: exactId })).data.Media // TODO: need to add a requestMediaID in myanimelist.js...
     else return this.anilistClient.requestMediaID(exactId)
@@ -1079,14 +1094,14 @@ class Cache {
       if (cache !== caches.QUERY_RECOMMENDATIONS || this.general.value.settings.queryComplexity === 'Complex') {
         if (res?.data?.Page?.media) {
           cacheRes.data.Page.media = cacheRes.data.Page.media.map(media => media.id)
-          await this.updateMedia(res.data.Page.media, await fillLists)
+          this.updateMedia(res.data.Page.media, await fillLists)
         } else if (res?.data?.Media) {
           cacheRes.data.Media = cacheRes.data.Media.id
-          await this.updateMedia([res.data.Media], await fillLists)
+          this.updateMedia([res.data.Media], await fillLists)
         } else if (res?.data?.MediaListCollection && !variables.token) {
           const lists = res.data.MediaListCollection.lists || []
           cacheRes.data.MediaListCollection = { ...res.data.MediaListCollection, lists: lists.map(list => ({ ...list, entries: list.entries.map(entry => ({ ...entry, media: entry.media.id })) })) }
-          await this.updateMedia(lists.flatMap(list => list.entries.map(entry => entry.media)))
+          this.updateMedia(lists.flatMap(list => list.entries.map(entry => entry.media)))
         }
       }
       this.#update(cache, key, { data: cacheRes, expiry, cachedAt: Date.now() })
@@ -1240,7 +1255,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
     }
   }
 
-  // Migrate extension sources from general settings into query_extensions.
+  // Migrate extension sources from general settings into extensions.
   if (database.objectStoreNames.contains(caches.GENERAL.key)) {
     try {
       const generalRecord = await wrapRequest(versionTx.objectStore(caches.GENERAL.key).get('settings'))
@@ -1267,7 +1282,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
       for (const [oldNestedName, cacheDefinition] of Object.entries({
         compound: caches.QUERY_COMPOUND,
         episodes: caches.QUERY_EPISODES,
-        extensions: caches.QUERY_EXTENSIONS,
+        extensions: caches.EXTENSIONS,
         rss: caches.QUERY_RSS,
         search: caches.QUERY_SEARCH,
         searchIDS: caches.QUERY_SEARCH_IDS,
@@ -1354,15 +1369,15 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   if (repositorySourcesData && Object.keys(repositorySourcesData).length > 0) {
     try {
       const existingRecord = await new Promise((resolve, reject) => {
-        const transaction = sharedDB.transaction(caches.QUERY_EXTENSIONS.key, 'readonly')
-        const request = transaction.objectStore(caches.QUERY_EXTENSIONS.key).get('repositorySources')
+        const transaction = sharedDB.transaction(caches.EXTENSIONS.key, 'readonly')
+        const request = transaction.objectStore(caches.EXTENSIONS.key).get('repositorySources')
         request.onsuccess = () => resolve(request.result)
         request.onerror = () => reject(request.error)
       })
       const merged = { ...(existingRecord?.value || {}), ...repositorySourcesData }
-      const transaction = sharedDB.transaction(caches.QUERY_EXTENSIONS.key, 'readwrite')
-      await wrapRequest(transaction.objectStore(caches.QUERY_EXTENSIONS.key).put({ key: 'repositorySources', value: merged }))
-      debug(`Migration: merged ${Object.keys(repositorySourcesData).length} repositorySources into query_extensions`)
+      const transaction = sharedDB.transaction(caches.EXTENSIONS.key, 'readwrite')
+      await wrapRequest(transaction.objectStore(caches.EXTENSIONS.key).put({ key: 'repositorySources', value: merged }))
+      debug(`Migration: merged ${Object.keys(repositorySourcesData).length} repositorySources into extensions`)
     } catch (error) {
       debug('Migration: failed to write repositorySources to shared DB:', error)
     }
@@ -1373,15 +1388,15 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   if (extensionSourcesData && Object.keys(extensionSourcesData).length > 0) {
     try {
       const existingRecord = await new Promise((resolve, reject) => {
-        const transaction = sharedDB.transaction(caches.QUERY_EXTENSIONS.key, 'readonly')
-        const request = transaction.objectStore(caches.QUERY_EXTENSIONS.key).get('extensionSources')
+        const transaction = sharedDB.transaction(caches.EXTENSIONS.key, 'readonly')
+        const request = transaction.objectStore(caches.EXTENSIONS.key).get('extensionSources')
         request.onsuccess = () => resolve(request.result)
         request.onerror = () => reject(request.error)
       })
       const merged = { ...(existingRecord?.value || {}), ...extensionSourcesData }
-      const transaction = sharedDB.transaction(caches.QUERY_EXTENSIONS.key, 'readwrite')
-      await wrapRequest(transaction.objectStore(caches.QUERY_EXTENSIONS.key).put({ key: 'extensionSources', value: merged }))
-      debug(`Migration: merged ${Object.keys(extensionSourcesData).length} extensionSources into query_extensions`)
+      const transaction = sharedDB.transaction(caches.EXTENSIONS.key, 'readwrite')
+      await wrapRequest(transaction.objectStore(caches.EXTENSIONS.key).put({ key: 'extensionSources', value: merged }))
+      debug(`Migration: merged ${Object.keys(extensionSourcesData).length} extensionSources into extensions`)
     } catch (error) {
       debug('Migration: failed to write extensionSources to shared DB:', error)
     }

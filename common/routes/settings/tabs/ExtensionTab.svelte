@@ -22,8 +22,8 @@
   $: viewSettings = {}
   $: pendingSource = false
   $: failedSource = null
-  $: availableSources = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources')) || {}
-  $: availableExtensions = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources')) || {}
+  $: availableSources = (settings.extensionsNew && cache.getEntry(caches.EXTENSIONS, 'repositorySources')) || {}
+  $: availableExtensions = (settings.extensionsNew && cache.getEntry(caches.EXTENSIONS, 'extensionSources')) || {}
 
   let sourceUrl = ''
   async function addSource(source) {
@@ -42,15 +42,15 @@
     else {
       const repositorySources = { ...(availableSources) }
       delete repositorySources[sourceUrl]
-      cache.setEntry(caches.QUERY_EXTENSIONS, 'repositorySources', repositorySources)
+      cache.setEntry(caches.EXTENSIONS, 'repositorySources', repositorySources)
     }
     updateAvailable()
     pendingSource = false
   }
 
   function updateAvailable() {
-    availableSources = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'repositorySources')) || {}
-    availableExtensions = (settings.extensionsNew && cache.getEntry(caches.QUERY_EXTENSIONS, 'extensionSources')) || {}
+    availableSources = (settings.extensionsNew && cache.getEntry(caches.EXTENSIONS, 'repositorySources')) || {}
+    availableExtensions = (settings.extensionsNew && cache.getEntry(caches.EXTENSIONS, 'extensionSources')) || {}
   }
 
   function parseSafeMarkdown(text) {

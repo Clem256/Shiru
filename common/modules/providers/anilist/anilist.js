@@ -573,7 +573,7 @@ class AnilistClient {
         targetList = { status: listEntry?.status, entries: [] }
         lists.push(targetList)
       }
-      await cache.updateMedia([{ ...(await cache.requestMedia(mediaId)), mediaListEntry: listEntry }])
+      cache.updateMedia([{ ...(await cache.requestMedia(mediaId)), mediaListEntry: listEntry }])
       targetList.entries.unshift({ media: await cache.requestMedia(mediaId) })
       const res = Promise.resolve({
         data: {
@@ -591,7 +591,7 @@ class AnilistClient {
 
   async deleteListEntry(mediaId) {
     const result = this.#listPromise.then(async () => {
-      await cache.updateMedia([{ ...(await cache.requestMedia(mediaId)), mediaListEntry: null }])
+      cache.updateMedia([{ ...(await cache.requestMedia(mediaId)), mediaListEntry: null }])
       const res = Promise.resolve({
         data: {
           MediaListCollection: {
@@ -1138,7 +1138,7 @@ class AnilistClient {
   //
   //   /** @type {import('./al.d.ts').PagedQuery<{media: import('./al.d.ts').Media[]}>} */
   //   const res = await this.alRequest(query, variables)
-  //   await cache.updateMedia(res?.data?.Page?.media)
+  //   cache.updateMedia(res?.data?.Page?.media)
   //
   //   return res
   // }
@@ -1173,7 +1173,7 @@ class AnilistClient {
   //   /** @type {import('./al.d.ts').PagedQuery<{ airingSchedules: { timeUntilAiring: number, airingAt: number, episode: number, media: import('./al.d.ts').Media}[]}>} */
   //   const res = await this.alRequest(query, variables)
   //
-  //   await cache.updateMedia(res?.data?.Page?.airingSchedules?.map(({media}) => media))
+  //   cache.updateMedia(res?.data?.Page?.airingSchedules?.map(({media}) => media))
   //
   //   return res
   // }
