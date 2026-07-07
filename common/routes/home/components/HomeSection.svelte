@@ -13,21 +13,34 @@
   import { click, dragScroll } from '@/modules/lib/click.js'
   import { SUPPORTS } from '@/modules/support.js'
   import { settings } from '@/modules/settings.js'
-  import { onDestroy, afterUpdate } from 'svelte'
+  import { resizeObserver, baseFontSize } from '@/modules/util.js'
+  import { onMount, onDestroy } from 'svelte'
   import { ChevronLeft, ChevronRight } from 'lucide-svelte'
 
   export let lastEpisode = false
+  export let index = 0
   export let opts
 
-  let visibleLength = 0
   const preview = opts.preview
+  const containerWidth = window.innerWidth / baseFontSize.value
+  const cardWidthMap = {
+    small: 19 + 5,
+    full: Math.min(52, containerWidth * .88) + 5,
+    episode: 36 + 5
+  }
+  const cardWidth = cardWidthMap[opts.isRSS ? 'episode' : ($settings.cards || 'small')] || cardWidthMap.small
+  let previewLength = Math.floor(containerWidth / cardWidth) + overflowLength || defaultLength
+  let sectionVisible = index < 5
+  let visibleLength = 0
+
   function deferredLoad (element) {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
+        sectionVisible = true
         if (!opts.preview.value) opts.preview.value = opts.load(1, loadableLength, { ...opts.variables })
         observer.unobserve(element)
       }
-    }, { threshold: 0 })
+    }, { threshold: 0, rootMargin: '200px' })
     observer.observe(element)
     return { destroy () { observer.unobserve(element) } }
   }
@@ -44,7 +57,6 @@
   }
 
   let scrollContainer
-  let previewLength = defaultLength
   function scrollCarousel(direction) {
     if (activeScroll) return
     if (direction === 'right' && (scrollContainer.scrollLeft + 2) >= (scrollContainer.scrollWidth - scrollContainer.clientWidth)) {
@@ -54,7 +66,7 @@
       visibleLength = loadableLength
       setTimeout(() => {
         scrolling()
-        scrollContainer.scrollTo({left: (scrollContainer.scrollWidth - scrollContainer.clientWidth), behavior: 'smooth'})
+        scrollContainer.scrollTo({ left: (scrollContainer.scrollWidth - scrollContainer.clientWidth), behavior: 'smooth' })
       })
     } else {
       visibleLength = Math.min((visibleLength || previewLength) + previewLength, loadableLength)
@@ -67,33 +79,24 @@
   }
 
   function handleScroll() {
-    if (scrollContainer && ((scrollContainer.scrollWidth - scrollContainer.clientWidth) - scrollContainer.scrollLeft < 100)) visibleLength = Math.min((visibleLength || previewLength) + overflowLength, loadableLength)
+    if (scrollContainer && ((scrollContainer.scrollWidth - scrollContainer.clientWidth) - scrollContainer.scrollLeft < 100)) {
+      visibleLength = Math.min((visibleLength || previewLength) + overflowLength, loadableLength)
+    }
   }
 
   let timeout
-  function handleUpdate() {
+  const trackSectionWidth = resizeObserver((node) => {
     clearTimeout(timeout)
     timeout = setTimeout(() => {
-      if (!scrollContainer) return
-      const cardItem = scrollContainer.querySelector('.small-card-ct, .full-card-ct, .episode-card')
-      if (cardItem) previewLength = (Math.floor((scrollContainer.offsetWidth) / (cardItem.offsetWidth)) || defaultLength) + overflowLength
+      const cardItem = node.querySelectorAll('.small-card-ct, .full-card-ct, .episode-card')
+      if (cardItem) previewLength = (Math.floor(node.offsetWidth / cardItem.offsetWidth) || defaultLength) + overflowLength
     }, 15)
-  }
+  })
 
-  let observer = null
-  $: {
-    if (scrollContainer && !observer) {
-      observer = new ResizeObserver(handleUpdate)
-      observer.observe(scrollContainer)
-      window.addEventListener('resize', handleUpdate)
-      scrollContainer.addEventListener('scroll', handleScroll)
-    }
-  }
-  afterUpdate(handleUpdate)
+  onMount(() => {
+    scrollContainer.addEventListener('scroll', handleScroll)
+  })
   onDestroy(() => {
-    observer?.disconnect()
-    observer = null
-    window.removeEventListener('resize', handleUpdate)
     scrollContainer.removeEventListener('scroll', handleScroll)
   })
 </script>
@@ -104,10 +107,13 @@
   <div class='pr-5 pl-5 ml-10 font-size-12 glow text-muted pointer btn d-none align-items-center justify-content-center' class:d-flex={!SUPPORTS.isAndroid} aria-hidden='true' use:click={() => scrollCarousel('right')}><ChevronRight strokeWidth='3' size='2rem' /></div>
 </span>
 <div class='position-relative' class:isRSS={opts.isRSS}>
-  <div class='pb-10 w-full d-flex flex-row justify-content-start gallery {!opts.isRSS ? `pl-15 pl-sm-10 pl-md-0` : ``}' class:pt-10={!opts.isRSS && $settings.cards === `full`} use:dragScroll bind:this={scrollContainer}>
-    {#each ($preview || fakecards).slice(0, visibleLength || previewLength) as card}
-      <Card {card} variables={{...opts.variables, section: true}} />
-    {/each}
+  <div class='pb-10 w-full d-flex flex-row justify-content-start gallery {!opts.isRSS ? `pl-15 pl-sm-10 pl-md-0` : ``}' class:pt-10={!opts.isRSS && $settings.cards === `full`} use:dragScroll use:trackSectionWidth bind:this={scrollContainer}>
+    <Card card={($preview || fakecards)[0]} variables={{...opts.variables, section: true}} />
+    {#if sectionVisible}
+      {#each ($preview || fakecards).slice(1, visibleLength || previewLength) as card}
+        <Card {card} variables={{...opts.variables, section: true}} />
+      {/each}
+    {/if}
     {#if $preview?.length}
       <ErrorCard promise={$preview[0].data} />
     {/if}

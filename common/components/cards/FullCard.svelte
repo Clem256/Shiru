@@ -5,8 +5,9 @@
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
   import { anilistClient, currentYear } from '@/modules/providers/anilist/anilist.js'
+  import { baseFontSize, resizeObserver } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
-  import { mediaCache } from '@/modules/cache.js'
+  import { mediaCache, fromCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
 
   /** @type {import('@/modules/providers/anilist/al.d.ts').Media} */
@@ -15,8 +16,7 @@
   let _variables = variables
 
   let media
-  $: if (data && !media) media = mediaCache.value[data?.id]
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
+  $: media = fromCache($mediaCache, media ?? mediaCache.value[data?.id])
   $: maxEp = getMediaMaxEp(media)
   $: hasSpoiler = $settings.spoilerStatus.includes(media?.mediaListEntry?.status ?? 'NOTONLIST')
 
@@ -27,29 +27,28 @@
 
   let baseWidth
   let imageWidth
-  let observer = null
+  $: baseWidth = 19 * $baseFontSize
   $: scale = Math.max(imageWidth && baseWidth ? Math.min(imageWidth / baseWidth, .9) : .9, .75)
+  const trackWidth = resizeObserver((_, entry) => {
+    const width = entry.contentRect.width
+    if (Math.abs(width - imageWidth) < 1) return
+    imageWidth = width
+  })
 
   let airingInterval
   let _airingAt = null
   $: airingInfo = getAiringInfo(_airingAt)
   onMount(() => {
-    baseWidth = 17 * parseFloat(getComputedStyle(document.documentElement).fontSize)
     _airingAt = media && _variables?.scheduleList && airingAt(media, _variables)
     if (_variables?.scheduleList) airingInterval = setInterval(() => airingInfo = getAiringInfo(_airingAt), 60_000)
-    observer = new ResizeObserver(() => baseWidth = 17 * parseFloat(getComputedStyle(document.documentElement).fontSize))
-    observer.observe(document.documentElement)
   })
-  onDestroy(() => {
-    observer?.disconnect()
-    clearTimeout(airingInterval)
-  })
+  onDestroy(() => clearTimeout(airingInterval))
 </script>
 
 <div class='d-flex px-md-20 px-sm-10 px-5 py-10 position-relative justify-content-center full-card-ct' use:click={viewMedia}>
-  <div class='card load-in m-0 p-0 pointer full-card rounded' class:airing={airingInfo?.episode.match(/out for/i)} style:--color={media.coverImage.color || 'var(--tertiary-color)'}>
+  <div class='card load-in m-0 p-0 pointer full-card rounded' class:airing={airingInfo?.episode.match(/out for/i)} style:--color={media.coverImage?.color || 'var(--tertiary-color)'}>
     <div class='row h-full'>
-      <div bind:clientWidth={imageWidth} class='img-col d-inline-block position-relative col-3 col-md-4'>
+      <div use:trackWidth class='img-col d-inline-block position-relative col-3 col-md-4'>
         <span class='airing-badge rounded-10 font-weight-semi-bold text-light bg-success' class:d-none={!airingInfo?.episode?.match(/out for/i)}>AIRING</span>
         <SmartImage class='cover-img w-full h-270' color={media.coverImage?.color || 'var(--tertiary-color)'} images={[media.coverImage.extraLarge, media.coverImage?.medium, './no_image_cover.jpg']}/>
         {#if !_variables?.scheduleList}

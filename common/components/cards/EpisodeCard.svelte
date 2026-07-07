@@ -17,7 +17,7 @@
   import { liveAnimeEpisodeProgress } from '@/modules/anime/animeprogress.js'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
   import { settings } from '@/modules/settings.js'
-  import { mediaCache } from '@/modules/cache.js'
+  import { mediaCache, fromCache } from '@/modules/cache.js'
   import { checkForZero } from '@/components/MediaHandler.svelte'
   import { modal } from '@/modules/navigation.js'
   export let data
@@ -31,10 +31,7 @@
 
   /** @type {import('@/modules/providers/anilist/al.d.ts').Media | null} */
   let media
-  $: if (data.media && !media) {
-    media = mediaCache.value[data.media.id]
-  }
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
+  $: media = fromCache($mediaCache, media ?? mediaCache.value[data.media?.id])
   $: checkForZero(media).then(_zeroEpisode => zeroEpisode = _zeroEpisode)
   $: episodeRange = episodesList.handleArray(data?.episode, data?.parseObject?.file_name)
   $: lastEpisode = (data?.episodeRange || data?.parseObject?.episodeRange)?.last || episodeRange?.last || (isValidNumber(data?.episode) && (data?.episode + (zeroEpisode ? 1 : 0))) || (media?.episodes === 1 && media?.episodes)

@@ -4,6 +4,7 @@
   import { page, modal, playPage } from '@/modules/navigation.js'
   import { nowPlaying } from '@/components/MediaHandler.svelte'
   import { updateState } from '@/modals/UpdateModal.svelte'
+  import { resizeObserver } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
   import { COMMON } from '@/modules/bridge.js'
   import { onMount, onDestroy } from 'svelte'
@@ -30,21 +31,11 @@
    */
   const PRIORITY = { [page.HOME]: 1, [page.SEARCH]: 2, [page.SCHEDULE]: 3, [modal.ANIME_DETAILS]: 4, [modal.NOTIFICATIONS]: 5, [page.TORRENT_MANAGER]: 6, [page.WATCH_TOGETHER]: 7, UPDATE_DOWNLOADING: 8, UPDATE_READY: 9, DONATE: 10, [modal.PROFILE]: 11, [page.SETTINGS]: 12 }
 
-  /** @type {ResizeObserver | undefined} */
-  let observer
-  /** @type {HTMLElement | undefined} */
-  let container
   /** @type {number} */
   let navbarSize = 768
   /** @type {number} */
   let itemMinSize = 56
 
-  $: {
-    if (sidebar && container && !$settings.expandingSidebar && $settings.showLabels !== undefined) {
-      observer?.unobserve(container)
-      observer?.observe(container)
-    }
-  }
   /**
    * All nav items in display order
    *
@@ -106,26 +97,29 @@
     closeDrawer()
   }
 
+  /**
+   * Tracks the nav container size and updates the item dimensions.
+   * Closes the drawer when the viewport crosses the mobile breakpoint.
+   */
+  const trackNavSize = resizeObserver((node, entry) => {
+    navbarSize = sidebar ? entry.contentRect.height : entry.contentRect.width
+    const item = node.querySelector('.navbar-button')
+    if (item) itemMinSize = sidebar ? item.getBoundingClientRect().height : item.getBoundingClientRect().width
+    if (!sidebar && window.innerWidth > 768) closeDrawer()
+    if (sidebar && window.innerWidth < 769) closeDrawer()
+  })
+
   onMount(() => {
-    observer = new ResizeObserver(entries => {
-      navbarSize = sidebar ? entries[0].contentRect.height : entries[0].contentRect.width
-      const item = container?.querySelector('.navbar-button')
-      if (item) itemMinSize = sidebar ? item.getBoundingClientRect().height : item.getBoundingClientRect().width
-      if (!sidebar && window.innerWidth > 768) closeDrawer()
-      if (sidebar && window.innerWidth < 769) closeDrawer()
-    })
-    if (container) observer.observe(container)
     document.addEventListener('pointerdown', onPointerDown)
     window.addEventListener('orientationchange', closeDrawer)
   })
   onDestroy(() => {
-    observer?.disconnect()
     document.removeEventListener('pointerdown', onPointerDown)
     window.removeEventListener('orientationchange', closeDrawer)
   })
 </script>
 
-<div bind:this={container} class='nav-items h-full w-full overflow-hidden d-flex {$$restProps.class}'>
+<div use:trackNavSize={sidebar && !$settings.expandingSidebar && $settings.showLabels !== undefined} class='nav-items h-full w-full overflow-hidden d-flex {$$restProps.class}'>
   {#each barItems as item (item)}
     {#if sidebar && item === firstBottom}
       <div class='mt-md-h-auto' />

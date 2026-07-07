@@ -5,8 +5,6 @@
   import { settings } from '@/modules/settings.js'
   import { manager as _manager } from '@/modules/sections.js'
   import { writable } from 'simple-store-svelte'
-  import Debug from 'debug'
-  const debug = Debug('ui:home')
 
   const manager = _manager
 
@@ -39,7 +37,7 @@
   <div class='d-flex flex-column h-full w-full mt-15'>
     {#each manager.sections as section, i (i)}
       {#if !section.hide}
-        <HomeSection bind:opts={section} lastEpisode={isPreviousRSS(i)}/>
+        <HomeSection bind:opts={section} index={i} lastEpisode={isPreviousRSS(i)}/>
       {/if}
     {/each}
   </div>

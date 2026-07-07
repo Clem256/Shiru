@@ -2,7 +2,7 @@
   import { formatMap, playMedia } from '@/modules/anime/anime.js'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
   import { settings } from '@/modules/settings.js'
-  import { mediaCache } from '@/modules/cache.js'
+  import { mediaCache, fromCache } from '@/modules/cache.js'
   import { SUPPORTS } from '@/modules/support.js'
   import { click, drag } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
@@ -12,13 +12,14 @@
   import Helper from '@/modules/providers/helper.js'
   import { Play, Heart } from 'lucide-svelte'
   import { modal } from '@/modules/navigation.js'
+  import { onDestroy } from 'svelte'
 
   export let mediaList
 
   let currentStatic = mediaList[0]
-  $: current = mediaList[0]
+  $: current = fromCache($mediaCache, current) ?? mediaList[0]
+  $: if (current !== currentStatic) currentStatic = current
   $: hasSpoiler = $settings.spoilerStatus.includes(currentStatic?.mediaListEntry?.status ?? 'NOTONLIST')
-  mediaCache.subscribe((value) => { if (current?.id && value && value[current?.id]?.id && (JSON.stringify(value[current?.id]) !== JSON.stringify(current))) { current = value[current?.id]; currentStatic = current } })
 
   function toggleFavourite () {
     current.isFavourite = anilistClient.favourite({ id: current.id, isFavourite: !current.isFavourite })
@@ -49,6 +50,8 @@
     if (deltaX < 0) setCurrent(mediaList[(currentIndex() + 1) % mediaList.length])
     else setCurrent(mediaList[(currentIndex() - 1 + mediaList.length) % mediaList.length])
   }
+
+  onDestroy(() => clearTimeout(timeout))
 </script>
 
 {#key currentStatic}

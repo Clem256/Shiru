@@ -1,7 +1,7 @@
 <script>
   import { onDestroy } from 'svelte'
   import { click } from '@/modules/lib/click.js'
-  import { fadeIn, fadeOut } from '@/modules/util.js'
+  import { fadeIn, fadeOut, baseFontSize } from '@/modules/util.js'
   import { ChevronLeft, ChevronRight } from 'lucide-svelte'
 
   /**
@@ -128,7 +128,7 @@
    * @returns {number}
    */
   function toRem(px) {
-    return px / parseFloat(getComputedStyle(document.documentElement).fontSize)
+    return px / baseFontSize.value
   }
 
   /**

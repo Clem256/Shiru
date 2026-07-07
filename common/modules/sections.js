@@ -361,7 +361,7 @@ function refreshSections(list, sections, schedule = false) {
       // remove preview value, to force UI to re-request data, which updates it once in viewport
       if (sections.includes(section.title) && !section.hide && (!schedule || section.isSchedule)) {
         const loaded = section.load(1, 50, section.variables)
-        if (!section.preview.value || !equal(await resolveData(loaded), await resolveData(section.preview.value))) section.preview.value = loaded
+        if (section.preview.value && !equal(await resolveData(loaded), await resolveData(section.preview.value))) section.preview.value = loaded
       }
     }
   })

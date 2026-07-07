@@ -27,6 +27,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { cache, caches } from '@/modules/cache.js'
   import { page, modal } from '@/modules/navigation.js'
+  import { baseFontSize } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
   import { SUPPORTS } from '@/modules/support.js'
   import { click } from '@/modules/lib/click.js'
@@ -227,7 +228,7 @@
   }
   async function calculateWidth() {
     await new Promise(resolve => setTimeout(resolve))
-    rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+    rootFontSize = baseFontSize.value
     if ($isMobile) {
       width = `${fixedMobileWidth}rem`
       minWidth = `${fixedMobileWidth}rem`

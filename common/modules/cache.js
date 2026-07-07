@@ -414,6 +414,23 @@ function createBatchWriter(dbName, firstFlushDelay = 10_000, subsequentFlushDela
   }
 }
 
+/**
+ * Returns the updated value from a cache if it differs from the current value, otherwise returns the current value.
+ *
+ * @template T
+ * @param {Record<string, T>} cache
+ * @param {T} current
+ * @param {string} [key='id'] The key to use for cache lookup.
+ * @returns {T} The updated value if changed, otherwise the current value
+ */
+export function fromCache(cache, current, key = 'id') {
+  if (!cache || !current?.[key]) return current
+  const updated = cache[current[key]]
+  if (!updated?.[key]) return current
+  if (JSON.stringify(updated) === JSON.stringify(current)) return current
+  return updated
+}
+
 /** @type {import('simple-store-svelte').Writable<Record<number, import('./providers/anilist/al.d.ts').Media>>} */
 export let mediaCache
 

@@ -1,7 +1,7 @@
 <script>
+  import { resizeObserver } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
   import { click } from '@/modules/lib/click.js'
-  import { onDestroy, afterUpdate } from 'svelte'
   import ToggleTitle from '@/modals/details/components/ToggleTitle.svelte'
   import ToggleFooter from '@/modals/details/components/ToggleFooter.svelte'
 
@@ -14,17 +14,15 @@
     showMore = !showMore
   }
 
-  let container = null
   let previewLength = 4
-  function updateRowLength() {
-    if (!container || !settings.value.toggleList) return
-    const firstItem = container.querySelector('.small-card')
-    if (firstItem) previewLength = Math.floor((container.offsetWidth) / (firstItem.offsetWidth)) || 1
+  function updateRowLength(node) {
+    if (!settings.value.toggleList) return
+    const firstItem = node.querySelector('.small-card')
+    if (firstItem) previewLength = Math.floor(node.offsetWidth / firstItem.offsetWidth) || 1
   }
 
-  function updateRowMarkers() {
-    if (!container) return
-    const cards = Array.from(container.querySelectorAll('.small-card'))
+  function updateRowMarkers(node) {
+    const cards = Array.from(node.querySelectorAll('.small-card'))
     cards.forEach(card => card.classList.remove('first-in-row', 'last-in-row'))
     if (!settings.value.toggleList) {
       if (cards.length > 0) {
@@ -47,24 +45,9 @@
     }
   }
 
-  function handleUpdate() {
-    updateRowLength()
-    updateRowMarkers()
-  }
-
-  let observer = null
-  $: {
-    if (container && !observer) {
-      observer = new ResizeObserver(handleUpdate)
-      observer.observe(container)
-      window.addEventListener('resize', handleUpdate)
-    }
-  }
-  afterUpdate(handleUpdate)
-  onDestroy(() => {
-    observer?.disconnect()
-    observer = null
-    window.removeEventListener('resize', handleUpdate)
+  const trackLayout = resizeObserver((node) => {
+    updateRowLength(node)
+    updateRowMarkers(node)
   })
 </script>
 
@@ -79,7 +62,7 @@
        class:scroll={!settings.value.toggleList && list.length > 2}
        class:flex-row={!settings.value.toggleList}
        class:flex-wrap={settings.value.toggleList}
-       bind:this={container}>
+       use:trackLayout>
     {#each !settings.value.toggleList ? list : (showMore ? list : list.slice(0, previewLength)) as item}
       <slot {item} {promise} />
     {/each}

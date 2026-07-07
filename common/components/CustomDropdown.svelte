@@ -29,8 +29,9 @@
     function createDropdownListener() {
         const { reactive, init } = createListener([`custom-menu-${id}`])
         init(true, true)
-        reactive.subscribe(value => {
+        const unsubscribe = reactive.subscribe(value => {
             if (!value) {
+                unsubscribe()
                 dropdown.update(() => {
                     init(false, true)
                     searchTextInput = ''

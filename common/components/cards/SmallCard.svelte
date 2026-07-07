@@ -2,13 +2,13 @@
   import { onMount, onDestroy } from 'svelte'
   import PreviewCard from '@/components/cards/PreviewCard.svelte'
   import { airingAt, getAiringInfo, formatMap, statusColorMap } from '@/modules/anime/anime.js'
-  import { createListener } from '@/modules/util.js'
+  import { createListener, baseFontSize, resizeObserver } from '@/modules/util.js'
   import { hoverClick } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
   import { anilistClient, currentYear } from '@/modules/providers/anilist/anilist.js'
   import { settings } from '@/modules/settings.js'
-  import { mediaCache } from '@/modules/cache.js'
+  import { mediaCache, fromCache } from '@/modules/cache.js'
   import { modal } from '@/modules/navigation.js'
   import { CalendarDays, Tv, ThumbsUp, ThumbsDown } from 'lucide-svelte'
 
@@ -19,12 +19,15 @@
   let _variables = variables
 
   let media
-  $: if (data && !media) media = mediaCache.value[data?.id]
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
+  $: media = fromCache($mediaCache, media ?? mediaCache.value[data?.id])
   function viewMedia() {
     if (_variables?.fileEdit) _variables.fileEdit(media)
     else modal.open(modal.ANIME_DETAILS, media)
   }
+
+  const { reactive, init } = createListener(['btn', 'scoring', 'mute', 'preview-safe-area'])
+  $: init(preview)
+  $: if (preview) clearTimeout(focusTimeout)
 
   let preview = false
   let ignoreFocus = false
@@ -79,34 +82,31 @@
 
   let baseWidth
   let imageWidth
-  let observer = null
+  $: baseWidth = 19 * $baseFontSize
+  $: scale = Math.max(imageWidth && baseWidth ? Math.min(imageWidth / baseWidth, .9) : .9, .75)
+  const trackWidth = resizeObserver((_, entry) => {
+    const width = entry.contentRect.width
+    if (Math.abs(width - imageWidth) < 1) return
+    imageWidth = width
+  })
 
   let airingInterval
   let _airingAt = null
   $: airingInfo = getAiringInfo(_airingAt)
   onMount(() => {
-    baseWidth = 19 * parseFloat(getComputedStyle(document.documentElement).fontSize)
     container.addEventListener('focusout', handleBlur)
     _airingAt = media && _variables?.scheduleList && airingAt(media, _variables)
     if (_airingAt) {
       airingInterval = setInterval(() => airingInfo = getAiringInfo(_airingAt), 60_000)
       airingInterval.unref?.()
     }
-    observer = new ResizeObserver(() => baseWidth = 19 * parseFloat(getComputedStyle(document.documentElement).fontSize))
-    observer.observe(document.documentElement)
   })
   onDestroy(() => {
     document.removeEventListener('pointerup', handleOutsideClick)
     container?.removeEventListener?.('focusout', handleBlur)
-    observer?.disconnect()
     clearTimeouts()
     clearTimeout(airingInterval)
   })
-
-  const { reactive, init } = createListener(['btn', 'scoring', 'mute', 'preview-safe-area'])
-  $: init(preview)
-  $: if (preview) clearTimeout(focusTimeout)
-  $: scale = Math.max(imageWidth && baseWidth ? Math.min(imageWidth / baseWidth, .9) : .9, .75)
 </script>
 
 <div bind:this={container} class='d-flex px-md-20 px-sm-10 px-5 py-20 position-relative small-card-ct' class:not-reactive={!$reactive} use:hoverClick={[viewMedia, setHoverState, viewMedia]} on:focus={handleFocus}>
@@ -122,7 +122,7 @@
         </span>
       </div>
     {/if}
-    <div bind:clientWidth={imageWidth} class='d-inline-block position-relative mb-5'>
+    <div use:trackWidth class='d-inline-block position-relative mb-5'>
       <span class='airing-badge rounded-10 font-weight-semi-bold text-light bg-success' class:d-none={!airingInfo?.episode?.match(/out for/i)}>AIRING</span>
       <SmartImage class='d-inline-block cover-img cover-ratio w-full h-full rounded' color={media.coverImage?.color || 'var(--tertiary-color)'} images={[media.coverImage.extraLarge, media.coverImage?.medium, './no_image_cover.jpg']}/>
       {#if !_variables?.scheduleList}

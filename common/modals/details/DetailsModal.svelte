@@ -1,9 +1,8 @@
 <script>
-  import { onDestroy } from 'svelte'
   import { formatMap, genreIcons, play, getEpisodeMetadataForMedia, getKitsuMappings, getMediaMaxEp } from '@/modules/anime/anime.js'
   import { copyToClipboard } from '@/modules/lib/clipboard.js'
   import { settings } from '@/modules/settings.js'
-  import { mediaCache } from '@/modules/cache.js'
+  import { mediaCache, fromCache } from '@/modules/cache.js'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
   import { click } from '@/modules/lib/click.js'
   import Details from '@/modals/details/components/Details.svelte'
@@ -18,6 +17,7 @@
   import SmallCard from '@/components/cards/SmallCard.svelte'
   import SmallCardSk from '@/components/skeletons/SmallCardSk.svelte'
   import Helper from '@/modules/providers/helper.js'
+  import { resizeObserver } from '@/modules/util.js'
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
@@ -30,15 +30,12 @@
 
   let _modal
   let container = null
-  let scrollTags = null
-  let scrollGenres = null
   let staticMedia
-  $: media = mediaCache.value[view?.id] || view
+  $: media = view ? fromCache($mediaCache, view?.id === media?.id ? media : (mediaCache.value[view?.id] ?? view)) : null
   $: {
     if (media && (!staticMedia || staticMedia?.id !== media?.id)) staticMedia = media
     else if (!media && staticMedia) staticMedia = null
   }
-  mediaCache.subscribe((value) => { if (value && (JSON.stringify(value[media?.id]) !== JSON.stringify(media))) media = value[media?.id] })
   $: episodeOrder = !!staticMedia
   $: watched = media?.mediaListEntry?.status === 'COMPLETED'
   $: hasSpoiler = $settings.spoilerStatus.includes(media?.mediaListEntry?.status ?? 'NOTONLIST')
@@ -143,26 +140,15 @@
     })
   }
 
-  let resizeObserver
-  let leftColumn, rightColumn
-  function syncHeights() {
-    if (leftColumn && rightColumn) {
-      const leftHeight = leftColumn.offsetHeight
+  let rightColumn
+  const syncColumnHeights = resizeObserver((node) => {
+    if (rightColumn) {
+      const leftHeight = node.offsetHeight
       if (rightColumn.style.height !== `${leftHeight}px`) {
         rightColumn.style.height = `${leftHeight}px`
       }
     }
-  }
-
-  $: {
-    resizeObserver?.disconnect()
-    if (staticMedia) {
-      resizeObserver = new ResizeObserver(syncHeights)
-      if (leftColumn) resizeObserver.observe(leftColumn)
-    }
-  }
-
-  onDestroy(() => resizeObserver?.disconnect())
+  })
 </script>
 
 <div class='modal modal-full z-50' class:show={staticMedia} on:keydown={checkClose} tabindex='-1' role='button' bind:this={_modal}>
@@ -182,7 +168,7 @@
         () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
       <div class='row px-20'>
         <div class='col-lg-7 col-12 pb-10'>
-          <div bind:this={leftColumn}>
+          <div use:syncColumnHeights>
             <div class='d-flex flex-sm-row flex-column align-items-sm-end pb-20 mb-15'>
               <div class='cover d-flex flex-row align-items-sm-end align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full' style='max-height: 50vh;'>
                 <div class='position-relative h-full'>
@@ -265,7 +251,7 @@
               </div>
             </div>
             <Details media={staticMedia} alt={recommendations} />
-            <div bind:this={scrollTags} use:resetScroll={staticMedia?.id} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
+            <div use:resetScroll={staticMedia?.id} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
               {#each staticMedia.tags as tag}
                 {#if !(hasSpoiler && ((tag.isGeneralSpoiler && ['strict', 'hermit'].includes($settings.spoilers)) || (tag.isMediaSpoiler && ['moderate', 'strict', 'hermit'].includes($settings.spoilers))))}
                   <div class='bg-dark-light px-20 py-10 mr-10 rounded text-nowrap d-flex align-items-center'>
@@ -274,7 +260,7 @@
                 {/if}
               {/each}
             </div>
-            <div bind:this={scrollGenres} use:resetScroll={staticMedia?.id} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
+            <div use:resetScroll={staticMedia?.id} class='m-0 px-20 pb-0 pt-10 d-flex flex-row text-nowrap overflow-x-scroll text-capitalize align-items-start'>
               {#each staticMedia.genres as genre}
                 <div class='bg-dark-light px-20 py-10 mr-10 rounded text-nowrap d-flex align-items-center select-all'><svelte:component this={genreIcons[genre]} class='mr-5' size='1.8rem' /> {genre}</div>
               {/each}

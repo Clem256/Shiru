@@ -1,5 +1,5 @@
 import { SUPPORTS } from '@/modules/support.js'
-import { writable } from 'simple-store-svelte'
+import { writable, readable } from 'simple-store-svelte'
 import { cubicOut, cubicIn } from 'svelte/easing'
 import levenshtein from 'js-levenshtein'
 import Fuse from 'fuse.js'
@@ -99,6 +99,50 @@ export function createDeferred() {
     throw new Error('Failed to create deferred promise')
   }
   return { promise, resolve: resolveFn, reject: rejectFn }
+}
+
+/** Reactive root font size in pixels, updates when the document font size changes. */
+export const baseFontSize = readable(
+  typeof getComputedStyle !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) : 16,
+  (set) => {
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => set(parseFloat(getComputedStyle(document.documentElement).fontSize)))
+    observer.observe(document.documentElement)
+    return () => observer.disconnect()
+  }
+)
+
+/**
+ * Creates a Svelte action that observes DOM mutations on a node.
+ *
+ * @param {(mutations: MutationRecord[]) => void} callback Called whenever matching mutations are observed.
+ * @param {MutationObserverInit} options
+ * @returns {(node: HTMLElement) => { destroy: () => void }}
+ */
+export function mutationObserver(callback, options = {}) {
+  return (node) => {
+    const observer = new MutationObserver(callback)
+    observer.observe(node, options)
+    return { destroy: () => observer.disconnect() }
+  }
+}
+
+/**
+ * Creates a Svelte action that observes resize events on a node.
+ *
+ * @param {(node: HTMLElement, entry: ResizeObserverEntry) => void} callback Called on every resize and on settings update.
+ * @param {ResizeObserverOptions} [options]
+ * @returns {(node: HTMLElement, param?: any) => { update: () => void, destroy: () => void }}
+ */
+export function resizeObserver(callback, options = {}) {
+  return (node, _param) => {
+    const observer = new ResizeObserver(([entry]) => callback(node, entry))
+    observer.observe(node, options)
+    return {
+      update: () => requestAnimationFrame(() => callback(node, { contentRect: node.getBoundingClientRect() })),
+      destroy: () => observer.disconnect()
+    }
+  }
 }
 
 /**

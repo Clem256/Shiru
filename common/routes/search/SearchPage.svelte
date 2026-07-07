@@ -1,9 +1,9 @@
 <script>
   import SearchBar, { searchCleanup } from '@/routes/search/components/SearchBar.svelte'
+  import { debounce, resizeObserver, mutationObserver } from '@/modules/util.js'
   import Card from '@/components/cards/Card.svelte'
   import { hasNextPage } from '@/modules/sections.js'
   import { status } from '@/modules/networking.js'
-  import { debounce } from '@/modules/util.js'
   import { onDestroy, onMount } from 'svelte'
   import { writable } from 'simple-store-svelte'
   import SectionsManager from '@/modules/sections.js'
@@ -24,18 +24,15 @@
   let container = null
   /** @type {HTMLElement} The key container element */
   let keyContainer = null
-  /** @type {ResizeObserver} Observes container size changes to update row markers */
-  let observer = null
-  /** @type {MutationObserver} Observes card additions to update row markers */
-  let mutationObserver = null
+  /** @type {boolean} Skips the initial resize observer fire */
+  let initialResize = true
   /** @type {import('simple-store-svelte').Writable<Array>} List of loaded card data items */
   const items = writable([])
   /** @type {number} Distance from bottom (px) at which the next page load is triggered */
   const scrollThreshold = 500
 
-  key?.subscribe(() => $items = [])
-  search?.subscribe((value) => $clearNow = value?.clearNow)
-
+  $: if ($key) $items = []
+  $: $clearNow = $search.clearNow
   $: loadTillFull($key)
 
   /** Recalculates and applies first-in-row / last-in-row classes to all loaded cards */
@@ -127,29 +124,27 @@
     }
   }
 
-  /** Sets up ResizeObserver and MutationObserver on the container, then triggers initial load */
-  onMount(() => {
-    if (container) {
-      let initialResize = true
-      observer = new ResizeObserver(() => !initialResize ? resizeRows() : initialResize = false)
-      observer.observe(container)
-      mutationObserver = new MutationObserver((mutations) => {
-        if (mutations.some(mutation => [...mutation.addedNodes].some(node => node.classList?.contains('small-card') || node.classList?.contains('large-card') || node.classList?.contains('episode-card')))) updateRows()
-      })
-      mutationObserver.observe(container, { subtree: true, childList: true })
-    }
-    loadTillFull($key)
+  /** Debounced row marker update on container resize, skipping the initial observer fire. */
+  const trackResize = resizeObserver(() => {
+    if (initialResize) initialResize = false
+    else resizeRows()
   })
 
-  /** Disconnects observers and resets search state if search was file-edit mode */
+  /** Updates row markers whenever card elements are added to the container. */
+  const trackMutations = mutationObserver((mutations) => {
+    if (mutations.some(mutation => [...mutation.addedNodes].some(node => node.classList?.contains('small-card') || node.classList?.contains('large-card') || node.classList?.contains('episode-card')))) updateRows()
+  }, { subtree: true, childList: true })
+
+  /** Triggers initial load */
+  onMount(() => loadTillFull($key))
+
+  /** Resets search state if search was file-edit mode */
   onDestroy(() => {
-    observer?.disconnect()
-    mutationObserver?.disconnect()
     if ($search.disableSearch) $search = { format: [], format_not: [], status: [], status_not: [] }
   })
 </script>
 
-<div bind:this={container} class='bg-dark h-full w-full overflow-y-scroll d-flex flex-wrap flex-row root overflow-x-hidden justify-content-center align-content-start' class:mt-safe-area={!$search.fileEdit && !$status.match(/offline/i)} class:bg-very-dark={$search.fileEdit} on:scroll={handleScroll} on:resize={resizeRows}>
+<div bind:this={container} class='bg-dark h-full w-full overflow-y-scroll d-flex flex-wrap flex-row root overflow-x-hidden justify-content-center align-content-start' class:mt-safe-area={!$search.fileEdit && !$status.match(/offline/i)} class:bg-very-dark={$search.fileEdit} use:trackResize use:trackMutations on:scroll={handleScroll}>
   <SearchBar bind:search={$search} clearNow={$clearNow} on:input={update} />
   <div bind:this={keyContainer} class='w-full d-grid d-md-flex flex-wrap flex-row px-20 px-md-40 justify-content-center align-content-start pt-10'>
     {#key $key}

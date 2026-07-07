@@ -177,8 +177,9 @@
     if ($showModal) {
       const { reactive, init } = createListener([`scoring`, `scoring-btn`])
       init(true, true)
-      reactive.subscribe(value => {
+      const unsubscribe = reactive.subscribe(value => {
         if (!value) {
+          unsubscribe()
           showModal.set(false)
           init(false, true)
         }
