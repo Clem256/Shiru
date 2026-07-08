@@ -56,6 +56,7 @@ export default class Protocol {
       let filePath = request.url.replace('extension://', '')
       // Fix drive paths
       if (/^[A-Z]\//i.test(filePath)) filePath = filePath.charAt(0) + ':' + filePath.slice(1)
+      else if (!/^[A-Za-z]:/.test(filePath)) filePath = '/' + filePath
       return net.fetch('file://' + filePath)
     })
 

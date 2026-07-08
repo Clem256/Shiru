@@ -25,12 +25,20 @@ export const VALID_SCHEMES = /^(https?:|gh:|npm:|file:|extension:)/
 export const getKey = (source) => (source?.locale || [source?.update]?.flat()?.[0]) + '/' + source?.id
 
 /**
+ * Checks if the url is a Windows, Linux, or macOS file path.
+ *
+ * @param {string} url
+ * @returns {boolean}
+ */
+export const isLocalPath = url => !url.includes(':') || /^[A-Za-z]:[/\\]/.test(url)
+
+/**
  * Normalizes a local file path or file: URL to the extension:// protocol convention.
  *
  * @param {string} url The URL or path to normalize.
  * @returns {string} The normalized URL.
  */
-export const normalizeUrl = url => /^[A-Z]:/.test(url) || url.startsWith('file:') ? `extension://${url.replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^\/+/, '')}` : url
+export const normalizeUrl = url => isLocalPath(url) || url.startsWith('file:') ? `extension://${url.replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^\/+/, '')}` : url
 
 /**
  * Creates and returns a new Web Worker instance for the given extension source.
@@ -102,7 +110,7 @@ async function getManifest(urls, updateCheck = false) {
   for (const url of [urls].flat()) {
     try {
       if (url.startsWith('http')) return resolveUrl(await (await fetch(url)).json(), url)
-      if (/^[A-Z]:/.test(url) || url.startsWith('file:') || url.startsWith('extension:')) {
+      if (isLocalPath(url) || url.startsWith('file:') || url.startsWith('extension:')) {
         const localeURL = (url.startsWith('extension:') ? url.replace(/^extension:/, 'file:') : url.startsWith('file:') ? url.replace(/^file:(?!\/{3})/, 'file:///') : `file:///${url.replace(/\\/g, '/')}`).replace(/^file:\/+/, 'file:///')
         const manifest = await (await fetch(localeURL + (!/\.json(\?|$)/i.test(localeURL) ? `${localeURL.endsWith('/') ? '' : '/'}index.json` : ''))).json()
         const basePath = url.replace(/^extension:/, '').replace(/^file:(?!\/{3})/, '').replace(/^file:\/+/, '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/[^/]+\.json$/, '')
