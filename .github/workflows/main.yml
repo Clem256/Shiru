@@ -37,9 +37,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           APP_VERSION="${{ steps.read_version.outputs.app_version }}"
+          PRERELEASE_FLAG=""
+          if [[ "$APP_VERSION" == *"beta"* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
           if ! gh release view "$APP_VERSION" > /dev/null 2>&1; then
             echo "Release $APP_VERSION not found, creating draft..."
-            gh release create "$APP_VERSION" --draft --title "${APP_VERSION#v}" --notes ""
+            gh release create "$APP_VERSION" --draft $PRERELEASE_FLAG --title "${APP_VERSION#v}" --notes ""
           else
             echo "Release $APP_VERSION already exists, skipping creation."
           fi
