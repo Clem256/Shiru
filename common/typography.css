@@ -53,6 +53,9 @@
 .block-scale-43 {
     block-size: 4.3rem;
 }
+.block-scale-160 {
+  block-size: 13rem;
+}
 
 /* Fixes unreasonably large text for portrait screens on mobile. */
 @media (max-width: 690px) {
@@ -106,6 +109,12 @@
 @media (min-width: 577px) {
   .w-sm-265 {
     width: 26.5rem !important;
+  }
+}
+
+@media (max-height: 420px) {
+  .block-scale-160 {
+    block-size: 10rem !important;
   }
 }
 

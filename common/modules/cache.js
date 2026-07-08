@@ -12,6 +12,8 @@ const SHARED_DB_NAME = 'shiru-shared'
 const openDBs = new Map()
 /** @type {number} */
 const version = 2 // DONT TOUCH THIS
+/** @type {import('simple-store-svelte').Writable<string|null>} */
+export const migrationStatus = writable(null)
 
 /** @type {number} */
 const EVICTION_MAX_PER_RUN = 500
@@ -99,6 +101,7 @@ function open(dbName) {
         for (const { key, shared } of Object.values(caches)) {
           if (!!shared === isShared && !database.objectStoreNames.contains(key)) database.createObjectStore(key, { keyPath: 'key' })
         }
+        if (oldVersion < version) migrationStatus.set('Getting everything ready, this may take a moment...')
         if (!isShared && oldVersion < 2) migration = UPGRADE_V1_TO_V2(database, versionTx)
       }
     }))
@@ -768,6 +771,8 @@ class Cache {
       })
     })
 
+    if (migrationStatus.value) migrationStatus.set('Migration complete, loading your cached data...')
+
     this.#startEvictionScheduler(cacheMap)
     debug('Caches have successfully been loaded!')
   }
@@ -1197,6 +1202,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   }
 
   // Move mappings and medias out of their old top-level stores in the user DB.
+  migrationStatus.set('Moving media library to shared storage...')
   for (const { oldKey, cache } of [{ oldKey: 'mappings', cache: caches.QUERY_MAPPINGS }, { oldKey: 'medias', cache: caches.MEDIA_CACHE }]) {
     if (!database.objectStoreNames.contains(oldKey)) {
       debug(`Migration: ${oldKey} not in user DB, skipping (likely already migrated)`)
@@ -1216,6 +1222,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   }
 
   // Remove a stale '{}' key that was incorrectly written to notifications in v1.
+  migrationStatus.set('Cleaning up legacy settings...')
   if (database.objectStoreNames.contains(caches.NOTIFICATIONS.key)) {
     try {
       versionTx.objectStore(caches.NOTIFICATIONS.key).delete('{}')
@@ -1275,6 +1282,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   }
 
   // Extract nested query sub-stores from the old 'queries' object store.
+  migrationStatus.set('Reorganizing your search and query history...')
   const legacyQueriesKey = 'queries'
   if (database.objectStoreNames.contains(legacyQueriesKey)) {
     try {
@@ -1306,10 +1314,11 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   }
 
   // Stamp cachedAt/expiry, extract user fields, and write entries to user_lists['entries']
+  migrationStatus.set('Extracting your user data...')
   const mediaEntries = allEntries.get(caches.MEDIA_CACHE)
   if (mediaEntries?.length) {
     const now = Date.now()
-    const userEntries  = {}
+    const userEntries = {}
     for (const entry of mediaEntries) {
       if (entry.value && !entry.value.cachedAt) entry.value = { ...entry.value, cachedAt: now, expiry: entry.value.status === 'FINISHED' ? now - getRandomInt(50, 65) * 24 * 60 * 60 * 1_000 : now + getRandomInt(12, 24) * 60 * 60 * 1_000 }
       const userFields = extractUserFields(entry.value)
@@ -1329,6 +1338,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   }
 
   // Write all collected entries to their target databases.
+  migrationStatus.set('Writing to shared database...')
   for (const [cache, entries] of allEntries) {
     if (typeof cache === 'string') continue
     if (!entries.length) {
@@ -1365,6 +1375,7 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
   }
 
   // Write migrated repository sources to shared DB
+  migrationStatus.set('Migrating extension sources...')
   const repositorySourcesData = allEntries.get('repositorySources')
   if (repositorySourcesData && Object.keys(repositorySourcesData).length > 0) {
     try {
