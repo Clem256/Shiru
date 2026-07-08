@@ -1,10 +1,12 @@
 import { COMMON, ELECTRON, ANDROID } from '@/modules/bridge.js'
-import { files } from '@/components/MediaHandler.svelte'
 import { settings } from '@/modules/settings.js'
 import { writable } from 'simple-store-svelte'
 import { cache } from '@/modules/cache.js'
 import Debug from 'debug'
 const debug = Debug('ui:history')
+
+/** @type {import('simple-store-svelte').Writable<Array<object>>} */
+export const files = writable([])
 
 /**
  * @typedef {Object} PageStore

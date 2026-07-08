@@ -6,6 +6,7 @@
   import { tick } from 'svelte'
   import { toast } from 'svelte-sonner'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
+  import { files as _files } from '@/modules/navigation.js'
   import { mediaCache } from '@/modules/cache.js'
   import { episodesList } from '@/modules/episodes.js'
   import { settings } from '@/modules/settings.js'
@@ -496,6 +497,7 @@
   }
 
   files.subscribe(async (files = []) => {
+      _files.set(files)
       handleFiles(files).catch(e => {
           toast.error('File Error', {
               description: e?.message || String(e),
