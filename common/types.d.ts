@@ -61,6 +61,7 @@ declare global {
       resetLog: () => Promise<any>
       notify: (opts: any) => void
       windowReady: () => void
+      isWindowVisible: () => Promise<boolean>
       openURI: (uri: string) => Promise<any>
       pickFile: (title: string) => Promise<string>
       pickFolder: (title: string) => Promise<string>
@@ -81,6 +82,7 @@ declare global {
     }
     android?: {
       minimize: () => void
+      showSplash: () => void
       toast: (text: string, duration?: 'short' | 'long') => Promise<void>
       onBackButton: (callback: (event: any) => void) => void
       hideStatusBar: () => void

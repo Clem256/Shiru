@@ -3,7 +3,7 @@ import { persisted } from 'svelte-persisted-store'
 import { writable } from 'simple-store-svelte'
 import { defaults } from '@/modules/util.js'
 import { toast } from 'svelte-sonner'
-import { COMMON, TORRENT } from '@/modules/bridge.js'
+import { COMMON, TORRENT, ANDROID } from '@/modules/bridge.js'
 import Debug from 'debug'
 const debug = Debug('ui:settings')
 
@@ -20,6 +20,7 @@ export const debugStore = persisted('debug', '', { serializer: { parse: e => e, 
  */
 const _onbeforeunload = window.onbeforeunload
 window.onbeforeunload = function (event) {
+  ANDROID.showSplash()
   TORRENT.reload()
   if (typeof _onbeforeunload === 'function') {
     const result = _onbeforeunload(event)

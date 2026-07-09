@@ -50,6 +50,7 @@ const commonDefaults = {
   resetLog: noopAsyncVoid,
   notify: noopVoid,
   windowReady: noopVoid,
+  isWindowVisible: noopAsyncBool,
   openURI: noopAsyncVoid,
   pickFile: noopAsyncString,
   pickFolder: noopAsyncString,
@@ -72,6 +73,7 @@ const commonDefaults = {
 }
 const androidDefaults = {
   minimize: noopVoid,
+  showSplash: noopVoid,
   toast: noopAsyncVoid,
   onBackButton: noopVoid,
   hideStatusBar: noopVoid,

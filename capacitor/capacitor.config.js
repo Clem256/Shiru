@@ -15,7 +15,10 @@ const config = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 10_000
+      launchShowDuration: 10_000,
+      backgroundColor: '#191d21',
+      androidSplashResourceName: 'splash_icon',
+      androidScaleType: 'CENTER_CROP'
     },
     CapacitorHttp: {
       enabled: true

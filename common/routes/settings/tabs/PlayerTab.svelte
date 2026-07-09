@@ -275,7 +275,7 @@
       <div class='input-group-prepend'>
         <button type='button' use:click={setPlayerPath} class='btn btn-primary input-group-append d-flex align-items-center justify-content-center'><span>Select Executable</span></button>
       </div>
-      <input type='url' class='form-control bg-dark text-truncate mw-100' readonly value={settings.playerPath} placeholder='Choose an executable…' />
+      <input type='url' class='form-control bg-dark text-truncate mw-100' readonly value={settings.playerPath} placeholder='Choose an executable...' />
       <div class='input-group-prepend'>
         <button type='button' use:click={() => settings.playerPath = ''} disabled={!settings.playerPath} class='btn btn-danger btn-square input-group-append px-5 d-flex align-items-center' title='Reset Location'><Eraser size='1.8rem' /></button>
       </div>

@@ -70,6 +70,7 @@ export default class App {
     this.mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     if (development) this.mainWindow.once('ready-to-show', () => this.showAndFocus(true))
     else ipcMain.on('common:windowReady', () => this.showAndFocus(true)) // HACK: Prevents the window from being shown while it's still loading. This is nice for production as the window can't be moved without the elements being rendered.
+    ipcMain.handle('common:isWindowVisible', () => this.mainWindow.isVisible())
     ipcMain.on('electron:openTorrentDevTools', () => this.webtorrentWindow.webContents.openDevTools({ mode: 'detach' }))
     ipcMain.on('electron:openDevTools', ({ sender }) => sender.openDevTools({ mode: 'detach' }))
     ipcMain.on('electron:hideWindow', () => this.mainWindow.hide())

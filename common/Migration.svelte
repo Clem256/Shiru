@@ -43,7 +43,7 @@
     font-size: 3.4rem;
   }
   .migration-backdrop {
-    transition: opacity 600ms ease 400ms, visibility 600ms ease 400ms;
+    transition: opacity 600ms ease 200ms, visibility 600ms ease 200ms;
   }
   .migration-dot {
     width: 1.8rem;

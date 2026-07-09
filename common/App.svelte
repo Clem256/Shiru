@@ -41,7 +41,7 @@
 
   onMount(() => {
     enableHistory()
-    COMMON.windowReady()
+    setTimeout(() => COMMON.windowReady(), 150).unref?.()
     document.addEventListener('fullscreenchange', updateFullscreen)
   })
   onDestroy(() => {

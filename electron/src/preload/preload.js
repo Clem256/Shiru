@@ -120,6 +120,7 @@ contextBridge.exposeInMainWorld('common', {
   resetLog: () => ipcRenderer.invoke('common:resetLog'),
   notify: (opts) => ipcRenderer.send('common:notify', opts),
   windowReady: () => ipcRenderer.send('common:windowReady'),
+  isWindowVisible: () => ipcRenderer.invoke('common:isWindowVisible'),
   openURI: (uri) => ipcRenderer.invoke('common:openURI', uri),
   pickFile: (title) => ipcRenderer.invoke('common:pickFile', title),
   pickFolder: (title) => ipcRenderer.invoke('common:pickFolder', title),

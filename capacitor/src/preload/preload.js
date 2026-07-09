@@ -4,6 +4,7 @@ import { Browser } from '@capacitor/browser'
 import { IntentUri } from 'capacitor-intent-uri'
 import { Filesystem } from '@capacitor/filesystem'
 import { development, keyboardVisible} from '../main/util.js'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { FileManager } from '../main/plugin.js'
 import { ipcWire } from '../main/ipc.js'
 import { SystemBars, SystemBarsStyle, SystemBarType } from '@capacitor/core'
@@ -157,6 +158,7 @@ window.common = {
   resetLog: async () => ipcWire.invoke('common:resetLog'),
   notify: (opts) => ipcWire.send('common:notify', opts),
   windowReady: () => ipcWire.send('common:windowReady'),
+  isWindowVisible: async () => true, // Currently not used for Capacitor...
   openURI: async (uri) => Browser.open({ url: uri }),
   pickFile: async (title) => '', // Currently not used for Capacitor...
   pickFolder: async (title) => ipcWire.invoke('common:pickFolder'),
@@ -188,6 +190,8 @@ window.android = {
    * We prefer to use #minimizeApp instead as it is a safe paused state.
    */
   minimize: () => Capacitor.minimizeApp(),
+  /** Shows the native Android splash screen. */
+  showSplash: () => SplashScreen.show({ autoHide : false }),
   /**
    * Displays a native toast notification.
    * @param {string} text The message to display.
