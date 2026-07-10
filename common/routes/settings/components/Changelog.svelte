@@ -27,6 +27,12 @@
   const startedAt = Date.now()
   if (SUPPORTS.isAndroid || COMMON.getPlatformInfo().manualInstall) COMMON.onUpdateAvailable((version) => setChangeLog(version))
   else COMMON.onUpdateDownloaded((version) => setChangeLog(version))
+
+  /**
+   * Updates the latest version and refreshes the changelog if the app has been running for at least 30 seconds.
+   *
+   * @param {string} version Latest available version string
+   */
   function setChangeLog(version) {
     if (latestVersion !== version) {
       latestVersion = version
@@ -35,8 +41,28 @@
   }
 
   /**
+   * Fetches a single release entry directly by its version tag.
+   * Used as a fallback when the releases feed has not yet reflected the latest release.
+   *
+   * @param {string} version Version string to fetch
+   * @returns {Promise<Object|null>} Mapped release entry or null on failure
+   */
+  export async function getReleaseByTag(version) {
+    try {
+      const response = await fetch(`https://api.github.com/repos/RockinChaos/Shiru/releases/tags/v${semver.valid(version)?.replace(/^v/, '') ?? version}`)
+      if (!response.ok) return null
+      const [entry] = mapLogs([await response.json()])
+      return entry
+    } catch (error) {
+      debug('Failed to fetch release by tag', error)
+      return null
+    }
+  }
+
+  /**
    * Fetches and filters GitHub releases based on current version and update channel.
    * Implements different filtering logic for stable/nightly channels and current version type.
+   *
    * @returns {Promise<Array>} Filtered array of release entries
    */
   async function getChanges() {
@@ -82,6 +108,7 @@
 
   /**
    * Maps GitHub release API response to simplified changelog entries.
+   *
    * @param {Array} json Raw GitHub API release data
    * @returns {Array} Mapped release entries with relevant fields
    */
@@ -104,6 +131,7 @@
 
   /**
    * Sanitizes markdown content by parsing and cleaning HTML.
+   *
    * @param {string} body Raw markdown content
    * @returns {string} Sanitized HTML string
    */
@@ -140,6 +168,7 @@
 
   /**
    * Handles link clicks within changelog content by opening externally.
+   *
    * @param {Event} event Click event
    */
   function hrefListener(event) {

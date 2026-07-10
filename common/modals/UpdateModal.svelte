@@ -6,7 +6,7 @@
   import { SUPPORTS } from '@/modules/support.js'
   import UpdatelogSk from '@/components/skeletons/UpdatelogSk.svelte'
   import SoftModal from '@/components/modals/SoftModal.svelte'
-  import Changelog, { changeLog, latestVersion, updateChannel } from '@/routes/settings/components/Changelog.svelte'
+  import Changelog, { changeLog, latestVersion, updateChannel, getReleaseByTag } from '@/routes/settings/components/Changelog.svelte'
   import { settings } from '@/modules/settings.js'
   import { page, modal } from '@/modules/navigation.js'
   import { createDeferred, uniqueStore } from '@/modules/util.js'
@@ -33,18 +33,25 @@
   async function getChangelog(updateVersion) {
     const changelog = await changeLog.value
     if (!changelog?.length) return null
-    const updateIndex = changelog.findIndex(entry => semver.valid(entry.version) === semver.valid(updateVersion))
-    if (updateIndex === -1) return { entry: changelog[0], preVersion: null }
-    const preStableIndex = changelog.findIndex((entry, index) => index > updateIndex && !semver.prerelease(entry.version))
+    let updateIndex = changelog.findIndex(entry => semver.valid(entry.version) === semver.valid(updateVersion))
+    let entry
+    if (updateIndex === -1) {
+      entry = await getReleaseByTag(updateVersion)
+      if (!entry) return { entry: changelog[0], preVersion: null }
+    } else entry = changelog[updateIndex]
+    const preStableIndex = changelog.findIndex((e, index) => (updateIndex === -1 || index > updateIndex) && !semver.prerelease(e.version))
     let nightlies = []
     if (semver.prerelease(updateVersion)) {
-      if (changelog.findIndex(entry => semver.valid(entry.version) === semver.valid(version)) !== -1) {
-        const nextStableIndex = changelog.findIndex((entry, index) => index > (updateIndex + 1) && !semver.prerelease(entry.version))
-        if (nextStableIndex !== -1) nightlies = changelog.slice(updateIndex + 1, nextStableIndex).filter(entry => semver.prerelease(entry.version) && semver.eq(semver.coerce(entry.version), semver.coerce(updateVersion)))
+      if (changelog.findIndex(e => semver.valid(e.version) === semver.valid(version)) !== -1) {
+        const effectiveIndex = updateIndex === -1 ? -1 : updateIndex
+        const nextStableIndex = changelog.findIndex((e, index) => index > (effectiveIndex + 1) && !semver.prerelease(e.version))
+        if (effectiveIndex !== -1 && nextStableIndex !== -1) {
+          nightlies = changelog.slice(effectiveIndex + 1, nextStableIndex).filter(e => semver.prerelease(e.version) && semver.eq(semver.coerce(e.version), semver.coerce(updateVersion)))
+        }
       }
     }
     return {
-      entry: changelog[updateIndex],
+      entry,
       preVersion: preStableIndex !== -1 ? changelog[preStableIndex].version : null,
       nightlies
     }
@@ -151,7 +158,7 @@
         {#if changelog?.entry}
           <div class='font-size-14 text-muted'>{new Date(changelog.entry.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
         {/if}
-      {:catch e}
+      {:catch}
         <div class='skeloader rounded w-120 h-20 bg-ske'/>
       {/await}
     </div>
@@ -216,7 +223,7 @@
       <div class='mt-10 mb-20'><span class='custom-link font-weight-bold d-flex' class:d-none={!changelog?.entry?.url} use:click={() => COMMON.openURI(changelog.entry.url)}>View on GitHub <ExternalLink class='ml-10' size='1.8rem' /></span></div>
       <div class='mt-30 mb-20 font-italic' class:d-none={!SUPPORTS.isAndroid}>{deliveryText}</div>
     </div>
-  {:catch e}
+  {:catch}
     <UpdatelogSk {deliveryText} />
   {/await}
   <div class='mt-auto border-top px-40'>
