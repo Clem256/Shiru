@@ -1683,7 +1683,7 @@
       <div>Resolution: {stats.resolution}</div>
       <div>Buffer health: {stats.buffer}</div>
       <div>Playback speed: x{stats.speed?.toFixed(1)}</div>
-      <div>Name: {current.name || ''}</div>
+      <div>Name: {current?.name || ''}</div>
       {#if playableFiles?.length > 1}
         <div class='mt-10'>All files in this batch:</div>
         <div class='overflow-auto ml-10 mt-5' style='max-height: 200px;'>
@@ -1706,7 +1706,7 @@
           {:else if media?.media?.title} <!-- useful when a torrent is EXTREMELY slow at loading... -->
             {anilistClient.title(media?.media)}
           {:else if current}
-            {AnimeResolver.cleanFileName(current.name)}
+            {AnimeResolver.cleanFileName(current?.name)}
           {/if}
         </div>
         <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
@@ -1820,7 +1820,7 @@
           {:else if media?.media?.title} <!-- useful when a torrent is EXTREMELY slow at loading... -->
             {anilistClient.title(media?.media)}
           {:else if current}
-            {AnimeResolver.cleanFileName(current.name)}
+            {AnimeResolver.cleanFileName(current?.name)}
           {/if}
         </div>
         <div class='font-weight-normal overflow-hidden text-truncate text-muted font-scale-16'>
