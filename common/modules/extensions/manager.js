@@ -201,10 +201,26 @@ class ExtensionManager {
   constructor() {
     let sources = null
     debug('Loading extensions from sources...')
-    settings.subscribe(() => {
+    settings.subscribe(value => {
       const newSources = cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}
       const sourcesOld = Object.keys(sources || {})
       const sourcesNew = Object.keys(newSources)
+
+      // Sync extensionsNew with shared database.
+      const extensionsNew = value.extensionsNew || {}
+      const toAdd = [...sourcesNew].filter(key => !(key in extensionsNew))
+      const toRemove = Object.keys(extensionsNew).filter(key => !newSources[key])
+      if (toAdd.length || toRemove.length) {
+        for (const key of toAdd) {
+          const defaults = Object.fromEntries((newSources[key].settings || []).map(setting => [setting.key, setting.default ?? null]))
+          extensionsNew[key] = { enabled: false, settings: defaults }
+        }
+        for (const key of toRemove) delete extensionsNew[key]
+        if (toAdd.length) debug(`Synced ${toAdd.length} new extension(s) into extensionsNew:`, toAdd)
+        if (toRemove.length) debug(`Removed ${toRemove.length} stale extension(s) from extensionsNew:`, toRemove)
+      }
+
+      // Update and Load extensions.
       if ((!sourcesOld?.length && !sourcesNew?.length) || !(sourcesOld.length === sourcesNew.length && sourcesOld.every(key => sourcesNew.includes(key)))) {
         if (sourcesOld.length && !sourcesNew.length) { sources = structuredClone(newSources); return }
         if (!sources && !sourcesNew.length) { this.whenReady.resolve(true); sources = {} }

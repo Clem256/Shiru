@@ -196,7 +196,7 @@
             {@const isActive = $activeWorkers[key]}
             {@const isInactive = $status !== 'offline' && $inactiveWorkers[key]}
             {@const extensionName = `${(extension?.name || extension?.id).slice(0, 25)}${extension?.name?.length > 25 ? '...' : ''}`}
-            <div class='card m-0 p-15 mb-10 bg-dark-light border position-relative' style='border-color: {stringToHex(extension?.locale || [extension?.update].flat()[0])} !important' class:extension-disabled={!settings.extensionsNew[key]?.enabled} class:extension-error={enabled && isInactive}>
+            <div class='card m-0 p-15 mb-10 bg-dark-light border position-relative' style='border-color: {stringToHex(extension?.locale || [extension?.update].flat()[0])} !important' class:extension-disabled={!enabled} class:extension-error={enabled && isInactive}>
               {#if enabled && isInactive}
                 <button class='btn position-absolute d-flex align-items-center justify-content-center border-0 p-0 z-10 bg-transparent icon-container' disabled={pendingSource} class:cursor-wait={pendingSource} data-toggle='tooltip' data-placement='right' data-title='Extension failed to validate. Click to retry.' use:click={() => validateExtension(key)}>
                   <div class='d-flex align-items-center justify-content-center error-indicator' style='color: var(--danger-color)'><TriangleAlert size='3.6rem' fill='var(--dark-color-light)'/></div>
