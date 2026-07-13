@@ -155,6 +155,9 @@ importers:
       fsctl:
         specifier: ^2.0.0
         version: 2.0.0
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
     devDependencies:
       '@capacitor/assets':
         specifier: ^3.0.5
@@ -174,6 +177,9 @@ importers:
 
   client:
     dependencies:
+      bencode:
+        specifier: ^4.0.0
+        version: 4.0.1
       bittorrent-tracker:
         specifier: ^11.2.3
         version: 11.2.3
@@ -231,6 +237,9 @@ importers:
       marked:
         specifier: ^18.0.5
         version: 18.0.5
+      ms:
+        specifier: ^2.1.3
+        version: 2.1.3
       p2pt:
         specifier: github:ThaUnknown/p2pt#modernise
         version: https://codeload.github.com/ThaUnknown/p2pt/tar.gz/9ad7a56ed6ee43f5664ebad33b803702ee349316
@@ -240,6 +249,9 @@ importers:
       rfdc:
         specifier: ^1.4.1
         version: 1.4.1(patch_hash=c9f93965feee0cc9f6da8f3451b078a567c0bb98da4f0c2f8b552e51a055789b)
+      rvfc-polyfill:
+        specifier: ^1.0.8
+        version: 1.0.8
       simple-store-svelte:
         specifier: ^1.0.6
         version: 1.0.6
@@ -1349,7 +1361,7 @@ packages:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
   anitomyscript@https://codeload.github.com/ThaUnknown/anitomyscript/tar.gz/42290c4b3f256893be08a4e89051f448ff5e9d00:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/ThaUnknown/anitomyscript/tar.gz/42290c4b3f256893be08a4e89051f448ff5e9d00}
+    resolution: {gitHosted: true, integrity: sha512-s+C9tbRiY/h+xhmPb0rZF6gS8u+m9zUEVfsf3htg6H/wUx1Pntb3XaYjCRR9YUdvxsmEWAPWa5s5aWvyq+VW8w==, tarball: https://codeload.github.com/ThaUnknown/anitomyscript/tar.gz/42290c4b3f256893be08a4e89051f448ff5e9d00}
     version: 2.0.5
 
   ansi-html-community@0.0.8:
@@ -4147,7 +4159,7 @@ packages:
     engines: {node: '>=6'}
 
   p2pt@https://codeload.github.com/ThaUnknown/p2pt/tar.gz/9ad7a56ed6ee43f5664ebad33b803702ee349316:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/ThaUnknown/p2pt/tar.gz/9ad7a56ed6ee43f5664ebad33b803702ee349316}
+    resolution: {gitHosted: true, integrity: sha512-EyKQSR6UNCiO6dCrQD0MQdy5cuoLIuYErl6GfaXXebzWhIHM54RLKeZbFMa4lx/ciOmtCQi7duooi5fFya6QzA==, tarball: https://codeload.github.com/ThaUnknown/p2pt/tar.gz/9ad7a56ed6ee43f5664ebad33b803702ee349316}
     version: 1.5.1
 
   package-json-from-dist@1.0.1:
@@ -5826,6 +5838,11 @@ packages:
   yaml@1.10.3:
     resolution: {integrity: sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA==}
     engines: {node: '>= 6'}
+
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yargs-parser@18.1.3:
     resolution: {integrity: sha512-o50j0JeToy/4K6OZcaQmW6lyXXKhq7csREXcDwk2omFPJEwUNOVtJKvmDr9EI1fAJZUyZcRF7kxGBWmRXudrCQ==}
@@ -12304,6 +12321,8 @@ snapshots:
   yallist@5.0.0: {}
 
   yaml@1.10.3: {}
+
+  yaml@2.9.0: {}
 
   yargs-parser@18.1.3:
     dependencies:
