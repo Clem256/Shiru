@@ -751,7 +751,7 @@
   let fitWidth = settings.value.playerCoverVideo ?? false
   function toggleFitWidth(value = fitWidth) {
     fitWidth = !value
-    settings.value.playerCoverVideo = value
+    $settings.playerCoverVideo = fitWidth
     return value
   }
   let showKeybinds = false
