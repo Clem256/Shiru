@@ -56,7 +56,7 @@ export default class App {
       if (state.isActive) SystemBars.hide({ bar: SystemBarType.StatusBar })
     })
     if (development) SplashScreen.hide()
-    else ipcWire.once('common:windowReady', () => setTimeout(() => SplashScreen.hide({ fadeOutDuration: 200 })).unref?.()) // HACK: Prevents the window from being shown while it's still loading. This is nice for production as the window can't be moved without the elements being rendered.
+    else ipcWire.once('common:windowReady', () => setTimeout(() => SplashScreen.hide({ fadeOutDuration: 600 })).unref?.()) // HACK: Prevents the window from being shown while it's still loading. This is nice for production as the window can't be moved without the elements being rendered.
 
     // Receives log events bridged from webtorrent.js stderr/stdout.
     NodeJS.addListener('torrent:log', ({ args }) => {
