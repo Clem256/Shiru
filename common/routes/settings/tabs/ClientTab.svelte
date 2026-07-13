@@ -83,7 +83,7 @@
 </SettingCard>
 <SettingCard title='Transfer Speed Limit' description='Download/Upload speed limit for torrents, higher values increase CPU usage, and values higher than your storage write speeds will quickly fill up RAM.'>
   <div class='input-group w-100 mw-full'>
-    <ClampedNumber bind:bindTo={settings.torrentSpeed} min={0.05} max={50} step={0.01} class='form-control text-right bg-dark'/>
+    <ClampedNumber bind:bindTo={settings.torrentSpeed} min={1} max={1024} class='form-control text-right bg-dark'/>
     <div class='input-group-append'>
       <span class='input-group-text bg-dark'>MB/s</span>
     </div>
