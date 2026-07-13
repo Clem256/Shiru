@@ -1085,14 +1085,17 @@
     if (bufferTimeout) {
       clearTimeout(bufferTimeout)
       bufferTimeout = null
-      buffering = false
     }
+    buffering = false
   }
 
-  function showBuffering () {
+  function showBuffering (skipCheck = false) {
+    if (bufferTimeout) clearTimeout(bufferTimeout)
     bufferTimeout = setTimeout(() => {
-      buffering = true
-      resetImmerse()
+      if (((skipCheck || video?.readyState < 3) && !externalPlayback) || (externalPlayback && !externalPlayerReady)) {
+        buffering = true
+        resetImmerse()
+      }
     }, 150)
   }
   $: navigator.mediaSession?.setPositionState({
