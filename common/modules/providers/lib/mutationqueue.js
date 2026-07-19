@@ -45,8 +45,8 @@ export class MutationQueue {
     if (malAuth) this.RATE_LIMITS.MyAnimeList = { perMinute: 15, delayMs: 3_000 }
     try {
       const stored = cache.getEntry(caches.GENERAL, cacheKey)
-      if (stored) {
-        this.#queue.value = JSON.parse(stored)
+      if (Array.isArray(stored) && stored.length) {
+        this.#queue.value = stored
         debug(`[${this.#provider}] loaded ${this.#queue.value.length} persisted mutation(s)`)
       }
     } catch (error) {
@@ -56,7 +56,7 @@ export class MutationQueue {
 
     const updateCache = debounce((value) => {
       debug(`[${this.#provider}] the number of mutations in the queue have changed, saving to cache...`)
-      cache.setEntry(caches.GENERAL, cacheKey, JSON.stringify(value.filter(mutation => !mutation.executed)))
+      cache.setEntry(caches.GENERAL, cacheKey, value.filter(mutation => !mutation.executed))
     }, 20)
     uniqueStore(this.#queue).subscribe(value => updateCache(value))
   }
