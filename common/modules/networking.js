@@ -61,7 +61,7 @@ window.fetch = async (...args) => {
 
   try {
     const res = await fetch(url, { ...options, signal: offlineController.signal })
-    if (!res?.ok && res?.status !== 429) fetchError({ response: res?.response, status: res?.status, message: res?.message })
+    if (!res?.ok && res?.status !== 404 && res?.status !== 429 && res?.status !== 451) fetchError({ response: res?.response, status: res?.status, message: res?.message })
     return res
   } catch (error) {
     if (error.name !== 'AbortedOffline') fetchError(error)

@@ -67,7 +67,12 @@
    */
   async function getChanges() {
     try {
-      const json = await (await fetch('https://api.github.com/repos/RockinChaos/Shiru/releases')).json()
+      const res = await fetch('https://api.github.com/repos/RockinChaos/Shiru/releases')
+      if (res.status === 404 || res.status === 451) {
+        debug('Repository is gone or access has been blocked, unable to fetch changes.')
+        return []
+      }
+      const json = await res.json()
       const mapJSON = mapLogs(json)
       const currentIndex = mapJSON.findIndex(entry => semver.valid(entry.version) === semver.valid(version))
       if (currentIndex === -1) return updateChannel.value === 'stable' ? mapJSON.filter(entry => !semver.prerelease(entry.version)) : mapJSON
@@ -113,7 +118,7 @@
    * @returns {Array} Mapped release entries with relevant fields
    */
   function mapLogs(json) {
-    return json.map(({body, tag_name: version, published_at: date, assets, html_url: url, prerelease}) => ({
+    return json.map(({ body, tag_name: version, published_at: date, assets, html_url: url, prerelease }) => ({
       body,
       version,
       date,
