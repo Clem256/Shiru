@@ -1098,6 +1098,7 @@ class Cache {
       if (this.status?.value?.match(/offline/i) || (!variables?.mappings && (!res || ((res.errors?.length > 0) && !res.errors?.[0]?.title?.match(/record not found/i))))) return this.cachedEntry(cache, key, true) || res
       if (cache !== caches.QUERY_RECOMMENDATIONS || this.general.value.settings.queryComplexity === 'Complex') {
         if (res?.data?.Page?.media) {
+          if (!res.data.Page.media.length) expiry = Date.now() + getRandomInt(1, 2) * 60 * 1_000 // dont cache empty queries for long.
           cacheRes.data.Page.media = cacheRes.data.Page.media.map(media => media.id)
           this.updateMedia(res.data.Page.media, await fillLists)
         } else if (res?.data?.Media) {
@@ -1105,6 +1106,7 @@ class Cache {
           this.updateMedia([res.data.Media], await fillLists)
         } else if (res?.data?.MediaListCollection && !variables.token) {
           const lists = res.data.MediaListCollection.lists || []
+          if (!lists.length) expiry = Date.now() + getRandomInt(1, 2) * 60 * 1_000  // dont cache empty queries for long.
           cacheRes.data.MediaListCollection = { ...res.data.MediaListCollection, lists: lists.map(list => ({ ...list, entries: list.entries.map(entry => ({ ...entry, media: entry.media.id })) })) }
           this.updateMedia(lists.flatMap(list => list.entries.map(entry => entry.media)))
         }

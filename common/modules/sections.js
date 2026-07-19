@@ -58,7 +58,7 @@ export default class SectionsManager {
             if (!_res?.data && _res?.errors) throw _res.errors[0]
             let animeFilter = {}
             const hasHideSubs = Object.keys(hideSubs)?.length > 0
-            const targetLists = Helper.isAniAuth() ? _res.data.MediaListCollection.lists : _res.data.MediaList
+            const targetLists = Helper.isAniAuth() ? _res.data.MediaListCollection?.lists : _res.data.MediaList || []
             const statusFilter = search.hideMyAnime ? search.hideStatus : search.showStatus
             const userAnimeIds = Array.from(new Set(Helper.isAniAuth() ? targetLists.filter(({ status }) => statusFilter.includes(status)).flatMap(list => list.entries.map(({ media }) => hasHideSubs ? media.idMal : media.id)) : targetLists.filter(({ node }) => statusFilter.includes(Helper.statusMap(node.my_list_status.status))).map(({ node }) => node.id))).filter(Boolean)
             // anilist queries do not support mix and match, you have to use the same id includes as excludes, id_not_in cannot be used with idMal_in.
@@ -163,8 +163,8 @@ function createSections () {
         if (Helper.isMalAuth()) return {} // not going to bother handling this, see below.
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
-          const mediaList = res.data.MediaListCollection.lists.find(({ status }) => status === 'COMPLETED')?.entries
-          const excludeIds = res.data.MediaListCollection.lists.reduce((filtered, { status, entries }) => { return (['CURRENT', 'REPEATING', 'COMPLETED', 'DROPPED', 'PAUSED'].includes(status)) ? filtered.concat(entries) : filtered}, []).map(({ media }) => media.id).filter(Boolean) || []
+          const mediaList = (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'COMPLETED')?.entries
+          const excludeIds = (res.data.MediaListCollection?.lists || []).reduce((filtered, { status, entries }) => { return (['CURRENT', 'REPEATING', 'COMPLETED', 'DROPPED', 'PAUSED'].includes(status)) ? filtered.concat(entries) : filtered}, []).map(({ media }) => media.id).filter(Boolean) || []
           if (!mediaList) return {}
           const ids = mediaList.flatMap(({ media }) => media.relations.edges.filter(edge => edge.relationType === 'SEQUEL')).map(({ node }) => node.id).filter(Boolean)
           if (!ids.length) return {}
@@ -178,8 +178,8 @@ function createSections () {
         if (Helper.isMalAuth()) return {} // same as Sequels You Missed
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
-          const mediaList = res.data.MediaListCollection.lists.find(({ status }) => status === 'COMPLETED')?.entries
-          const excludeIds = res.data.MediaListCollection.lists.reduce((filtered, { status, entries }) => { return (['CURRENT', 'REPEATING', 'COMPLETED', 'DROPPED', 'PAUSED'].includes(status)) ? filtered.concat(entries) : filtered}, []).map(({ media }) => media.id).filter(Boolean) || []
+          const mediaList = (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'COMPLETED')?.entries
+          const excludeIds = (res.data.MediaListCollection?.lists || []).reduce((filtered, { status, entries }) => { return (['CURRENT', 'REPEATING', 'COMPLETED', 'DROPPED', 'PAUSED'].includes(status)) ? filtered.concat(entries) : filtered}, []).map(({ media }) => media.id).filter(Boolean) || []
           if (!mediaList) return {}
           const ids = mediaList.flatMap(({ media }) => media.relations.edges.filter(edge => !['SEQUEL', 'CHARACTER', 'OTHER'].includes(edge.relationType))).map(({ node }) => node.id).filter(Boolean)
           if (!ids.length) return {}
@@ -192,7 +192,7 @@ function createSections () {
       load: (page = 1, perPage = 50, variables = {}) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
-          let mediaList = Helper.isAniAuth() ? res.data.MediaListCollection.lists.reduce((filtered, { status, entries }) => (status === 'CURRENT' || status === 'REPEATING') ? filtered.concat(entries) : filtered, []) : res.data.MediaList.filter(({ node }) => (node.my_list_status.status === Helper.statusMap('CURRENT') || node.my_list_status.is_rewatching))
+          let mediaList = Helper.isAniAuth() ? (res.data.MediaListCollection?.lists || []).reduce((filtered, { status, entries }) => (status === 'CURRENT' || status === 'REPEATING') ? filtered.concat(entries) : filtered, []) : (res.data.MediaList || []).filter(({ node }) => (node.my_list_status.status === Helper.statusMap('CURRENT') || node.my_list_status.is_rewatching))
           if (!mediaList) return {}
           return animeSchedule.dubAiringLists.value.then(airing => {
             if (settings.value.preferDubs) {
@@ -242,8 +242,8 @@ function createSections () {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
-            ? res.data.MediaListCollection.lists.find(({ status }) => status === 'CURRENT')?.entries
-            : res.data.MediaList.filter(({ node }) => node.my_list_status.status === Helper.statusMap('CURRENT'))
+            ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'CURRENT')?.entries
+            : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('CURRENT'))
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
@@ -255,8 +255,8 @@ function createSections () {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
-            ? res.data.MediaListCollection.lists.find(({ status }) => status === 'REPEATING')?.entries
-            : res.data.MediaList.filter(({ node }) => node.my_list_status.status === Helper.statusMap('REPEATING'))
+            ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'REPEATING')?.entries
+            : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('REPEATING'))
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
@@ -268,8 +268,8 @@ function createSections () {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
-            ? res.data.MediaListCollection.lists.find(({ status }) => status === 'COMPLETED')?.entries
-            : res.data.MediaList.filter(({ node }) => node.my_list_status.status === Helper.statusMap('COMPLETED'))
+            ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'COMPLETED')?.entries
+            : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('COMPLETED'))
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
@@ -281,8 +281,8 @@ function createSections () {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
-            ? res.data.MediaListCollection.lists.find(({ status }) => status === 'PLANNING')?.entries
-            : res.data.MediaList.filter(({ node }) => node.my_list_status.status === Helper.statusMap('PLANNING'))
+            ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'PLANNING')?.entries
+            : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('PLANNING'))
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
@@ -294,8 +294,8 @@ function createSections () {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
-            ? res.data.MediaListCollection.lists.find(({ status }) => status === 'PAUSED')?.entries
-            : res.data.MediaList.filter(({ node }) => node.my_list_status.status === Helper.statusMap('PAUSED'))
+            ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'PAUSED')?.entries
+            : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('PAUSED'))
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
@@ -307,8 +307,8 @@ function createSections () {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
-            ? res.data.MediaListCollection.lists.find(({ status }) => status === 'DROPPED')?.entries
-            : res.data.MediaList.filter(({ node }) => node.my_list_status.status === Helper.statusMap('DROPPED'))
+            ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'DROPPED')?.entries
+            : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('DROPPED'))
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })

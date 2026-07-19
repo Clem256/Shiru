@@ -486,7 +486,7 @@ class AnilistClient {
           return 0
       }
     }
-    res.data.MediaListCollection.lists.forEach(list => {
+    (res.data.MediaListCollection?.lists || []).forEach(list => {
       list.entries = list.entries.filter(entry => entry.media).sort((a, b) => {
         const aValue = getSortValue(a)
         const bValue = getSortValue(b)
