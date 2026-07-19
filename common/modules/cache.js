@@ -1,4 +1,4 @@
-import { generalDefaults, historyDefaults, extensionDefaults, notifyDefaults, isValidNumber, getRandomInt } from './util.js'
+import { generalDefaults, historyDefaults, extensionDefaults, notifyDefaults, isValidNumber, getRandomInt, generateRandomHexCode } from './util.js'
 import { writable } from 'simple-store-svelte'
 import equal from 'fast-deep-equal/es6'
 import rfdc from 'rfdc'
@@ -1231,6 +1231,19 @@ async function UPGRADE_V1_TO_V2(database, versionTx) {
       debug('Migration: deleted stale {} entry from notifications store')
     } catch (error) {
       debug('Migration: failed to delete {} from notifications:', error)
+    }
+
+    // Stamp missing uids onto notification entries.
+    try {
+      const notificationsRecord = await wrapRequest(versionTx.objectStore(caches.NOTIFICATIONS.key).get('notifications'))
+      const notifications = notificationsRecord?.value
+      if (Array.isArray(notifications)) {
+        const stamped = notifications.map(notification => notification.uid ? notification : { ...notification, uid: generateRandomHexCode(8) })
+        await wrapRequest(versionTx.objectStore(caches.NOTIFICATIONS.key).put({ key: 'notifications', value: stamped }))
+        debug('Migration: stamped uids onto notification entries')
+      }
+    } catch (error) {
+      debug('Migration: failed to stamp uids onto notifications:', error)
     }
   }
 

@@ -1,11 +1,11 @@
 import { sort, dedupe, upsert, splitLocalAndSystem, markAsRead, getFlags } from '@/modules/notification/util.js'
-import { debounce, generateRandomHexCode } from '@/modules/util.js'
+import { debounce } from '@/modules/util.js'
 import { cache, caches, mediaCache } from '@/modules/cache.js'
 import { derived, writable } from 'simple-store-svelte'
 import { COMMON, ELECTRON } from '@/modules/bridge.js'
 
 /** @type {import('simple-store-svelte').Writable<any[]>} */
-export const localNotifications = writable((cache.getEntry(caches.NOTIFICATIONS, 'notifications') || []).map((n) => ({ ...n, uid: n.uid ?? generateRandomHexCode(8) })))
+export const localNotifications = writable(cache.getEntry(caches.NOTIFICATIONS, 'notifications') || [])
 /** @type {import('simple-store-svelte').Readable<number>} */
 export const unreadCount = derived(localNotifications, _notifications => _notifications?.filter?.(notification => notification.read !== true)?.length)
 
