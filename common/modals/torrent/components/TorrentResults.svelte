@@ -85,8 +85,9 @@
   /**
    * @param {Result[]} results
    * @param {string} sort
+   * @param {boolean} batch
    */
-  function sortResults(results, sort) {
+  function sortResults(results, sort, batch) {
     if (!results) return { results: [], hiddenResults: [] }
     const deduped = Array.from(dedupe(results)).map(result => {
       if (!(result.parseObject?.release_group && result.parseObject.release_group.length < 20)) result.parseObject = { ...result.parseObject, release_group: 'No Group' }
@@ -96,8 +97,11 @@
       results: deduped.filter(entry => entry.seeders > 0 || entry.source?.managed).sort((a, b) => {
         switch (sort) {
           case 'smallest': return a.size - b.size
-          case 'best': return (b.type === 'best') - (a.type === 'best') || (b.type === 'alt') - (a.type === 'alt')
-          case 'batch': return (b.type === 'batch') - (a.type === 'batch')
+          case 'best': return ((b.type === 'best') - (a.type === 'best') || (b.type === 'alt') - (a.type === 'alt')) || b.seeders - a.seeders
+          case 'batch': {
+            if (!batch) return b.seeders - a.seeders
+            return ((b.type === 'batch') - (a.type === 'batch')) || b.seeders - a.seeders
+          }
           case 'new': return new Date(b.date) - new Date(a.date)
           case 'old': return new Date(a.date) - new Date(b.date)
           case 'seeders':
@@ -323,7 +327,7 @@
   $: queries = queryExtensions({...search}, resolution)
   $: errors = getErrors({...search}, queries)
 
-  $: queryResults = sortResults($results?.torrents, $settings.torrentSort)
+  $: queryResults = sortResults($results?.torrents, $settings.torrentSort, batch)
   $: lookup = queryResults?.results
 
   $: best = null
