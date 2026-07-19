@@ -285,11 +285,14 @@
   }
 
   async function setCurrent(file, launchExternal = false) {
+    if ((externalPlayback || launchExternal) && document.fullscreenElement) document.exitFullscreen()
     if (!externalPlayback) {
       src = file.url
-      subs = new Subtitles(video, files, current, handleHeaders)
-      video.load()
-      await loadAnimeProgress()
+      if (!launchExternal) {
+        subs = new Subtitles(video, files, current, handleHeaders)
+        video.load()
+        await loadAnimeProgress()
+      } else video.load()
     } else externalPlaying = false
     emit('current', current) // #handleCurrent in MediaHandler
     if (externalPlayback) {
@@ -302,8 +305,10 @@
       })
     }
     paused = true
-    currentTime = 0
-    targetTime = 0
+    if (!launchExternal) {
+      currentTime = 0
+      targetTime = 0
+    }
     launchedExternal = launchExternal
     TORRENT.setPlayback(file, settings.value.enableExternal || launchExternal)
   }
@@ -2030,6 +2035,7 @@
           ...((!externalPlayback || launchedExternal) && (SUPPORTS.isAndroid || $settings.playerPath) ? [{
             icon: SquareArrowOutUpRight,
             label: 'External Player',
+            close: true,
             onSelect: () => setCurrent(current, true)
           }] : []),
           ...(!externalPlayback ? [{
@@ -2057,7 +2063,7 @@
           <Eye size='2.5rem' strokeWidth={2.5} />
         </span>
       {/if}
-      {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1}
+      {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1 && !externalPlayback}
         <NestedDropdown title='Audio Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.audioTracks).map(track => ({
             label: (track.language?.toUpperCase() || (!Object.values(video.audioTracks).some(_track => _track.language === 'eng' || _track.language === 'en') ? 'ENG' : track.label?.toUpperCase())) + (track.label ? ' (' + capitalize(track.label) + ')' : ''),
             value: track.enabled ? '✓' : undefined,
@@ -2069,7 +2075,7 @@
           </span>
         </NestedDropdown>
       {/if}
-      {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1}
+      {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1 && !externalPlayback}
         <NestedDropdown title='Video Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.videoTracks).map(track => ({
             label: (track.language?.toUpperCase() || (!Object.values(video.videoTracks).some(_track => _track.language === 'eng' || _track.language === 'en') ? 'ENG' : track.label?.toUpperCase())) + (track.label ? ' (' + capitalize(track.label) + ')' : ''),
             value: track.selected ? '✓' : undefined,
