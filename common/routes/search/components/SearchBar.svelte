@@ -33,8 +33,8 @@
     delete search.clearNow
     return {
       headers: {
-        [genreList[0]]: 'Genres',
-        [tagList[0]]: 'Tags'
+        [$genreList[0]]: 'Genres',
+        [$tagList[0]]: 'Tags'
       },
       tags: [...toArray(search?.genre), ...toArray(search?.tag)],
       tags_not: [...toArray(search?.genre_not), ...toArray(search?.tag_not)]
@@ -43,10 +43,10 @@
 
   $: {
     for (const [key, val] of Object.entries({
-      genre: searchTags.tags.filter(val => genreList.includes(val)),
-      tag: searchTags.tags.filter(val => tagList.includes(val)),
-      genre_not: searchTags.tags_not.filter(val => genreList.includes(val)),
-      tag_not: searchTags.tags_not.filter(val => tagList.includes(val))
+      genre: searchTags.tags.filter(val => $genreList.includes(val)),
+      tag: searchTags.tags.filter(val => $tagList.includes(val)),
+      genre_not: searchTags.tags_not.filter(val => $genreList.includes(val)),
+      tag_not: searchTags.tags_not.filter(val => $tagList.includes(val))
     })) {
       const current = Array.isArray(search[key]) ? search[key] : []
       if (current.length !== val.length || current.join() !== val.join()) search[key] = val
@@ -203,7 +203,7 @@
         <div>Genres</div>
       </div>
       <div class='input-group' title={(!Helper.isAniAuth() && Helper.isUserSort(search)) ? 'Cannot use with sort: ' + sortOptions[search.sort] : ''}>
-        <CustomDropdown id={`tags-input`} bind:form headers={searchTags.headers} options={[...toArray(genreList), ...toArray(tagList)]} bind:value={searchTags.tags} bind:altValue={searchTags.tags_not} constrainAlt={false} disabled={search.disableSearch || (!Helper.isAniAuth() && Helper.isUserSort(search))}/>
+        <CustomDropdown id={`tags-input`} bind:form headers={searchTags.headers} options={[...toArray($genreList), ...toArray($tagList)]} bind:value={searchTags.tags} bind:altValue={searchTags.tags_not} constrainAlt={false} disabled={search.disableSearch || (!Helper.isAniAuth() && Helper.isUserSort(search))}/>
       </div>
     </div>
     <div class='col-lg col-4 p-10 z-4 d-none {advancedSearch} flex-column justify-content-end' class:d-flex={!search.scheduleList}>

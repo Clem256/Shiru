@@ -9,11 +9,11 @@ import clipboard from '@/modules/lib/clipboard.js'
 import { playAnime } from '@/modals/torrent/TorrentModal.svelte'
 import { animeSchedule } from '@/modules/anime/animeschedule.js'
 import AnimeResolver from '@/modules/anime/animeresolver.js'
-import { episodesList } from '@/modules/episodes.js'
 import { settings } from '@/modules/settings.js'
 import { cache, caches, mediaCache } from '@/modules/cache.js'
 import { COMMON, ELECTRON } from '@/modules/bridge.js'
 import { status } from '@/modules/networking.js'
+import { derived } from 'simple-store-svelte'
 import Helper from '@/modules/providers/helper.js'
 import Bottleneck from 'bottleneck'
 import { Drama, BookHeart, MountainSnow, Laugh, Adult, Droplets, FlaskConical, Ghost, Skull, HeartPulse, Volleyball, Car, Brain, Footprints, Guitar, Bot, Sparkles, WandSparkles, Activity } from 'lucide-svelte'
@@ -341,14 +341,14 @@ export const genreIcons = {
   'Thriller': HeartPulse
 }
 
-export const genreList = [
+export const genreList = derived(settings, $settings => [
   'Action',
   'Adventure',
   'Comedy',
   'Drama',
   'Ecchi',
   'Fantasy',
-  ...(settings.value.adult === 'hentai' ? ['Hentai'] : []),
+  ...($settings.adult === 'hentai' ? ['Hentai'] : []),
   'Horror',
   'Mahou Shoujo',
   'Mecha',
@@ -361,9 +361,9 @@ export const genreList = [
   'Sports',
   'Supernatural',
   'Thriller'
-]
+])
 
-export const tagList = [
+export const tagList = derived(settings, $settings => [
   'Chuunibyou',
   'Demons',
   'Food',
@@ -709,7 +709,6 @@ export const tagList = [
   'Youkai',
   'Zombie',
   'Vertical Video',
-  ...(settings.value.adult === 'hentai' ? [
   'Ahegao',
   'Anal Sex',
   'Armpits',
@@ -766,8 +765,9 @@ export const tagList = [
   'Vore',
   'Voyeur',
   'Zoophilia'
+  ...($settings.adult === 'hentai' ? [
   ] : [])
-]
+])
 
 export async function playMedia (media) {
   const zeroEpisode = await hasZeroEpisode(media)

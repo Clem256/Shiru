@@ -281,10 +281,10 @@
           />
         </div>
         <div class='position-relative flex-shrink-1 w-150'>
-          <CustomDropdown id={`genre-is-${i}`} options={genreList} bind:value={settings.customSections[i][1]} disabled={settings.customSections[i][1]?.includes('N/A')}/>
+          <CustomDropdown id={`genre-is-${i}`} options={$genreList} bind:value={settings.customSections[i][1]} disabled={settings.customSections[i][1]?.includes('N/A')}/>
         </div>
         <div class='position-relative flex-shrink-1 w-150'>
-          <CustomDropdown id={`tag-is-${i}`} options={tagList} bind:value={settings.customSections[i][2]} disabled={settings.customSections[i][2]?.includes('N/A')}/>
+          <CustomDropdown id={`tag-is-${i}`} options={$tagList} bind:value={settings.customSections[i][2]} disabled={settings.customSections[i][2]?.includes('N/A')}/>
         </div>
         <div class='input-group-append'>
           <button type='button' use:click={() => { settings.customSections.splice(i, 1); settings.customSections = settings.customSections }} class='btn btn-danger btn-square input-group-append px-5 d-flex align-items-center'><Trash2 size='1.8rem' /></button>
