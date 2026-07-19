@@ -618,6 +618,9 @@ a[href]:active, button:not([disabled], .not-reactive):active:not([data-sonner-to
 .mb-30 {
   margin-bottom: 3rem;
 }
+.mb-90 {
+  margin-bottom: 9rem;
+}
 
 .ml--1 {
   margin-left: -1rem;

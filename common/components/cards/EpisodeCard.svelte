@@ -129,7 +129,7 @@
   $: if (!preview) document.removeEventListener('pointerup', handleOutsideClick)
 </script>
 
-<div bind:this={container} class='d-flex p-20 pb-10 position-relative episode-card' class:mb-150={section} class:not-reactive={!$reactive} use:hoverClick={[setClickState, setHoverState, viewMedia]} on:focus={handleFocus}>
+<div bind:this={container} class='d-flex p-20 pb-10 position-relative episode-card' class:mb-100={section} class:not-reactive={!$reactive} use:hoverClick={[setClickState, setHoverState, viewMedia]} on:focus={handleFocus}>
   {#if preview}
     <EpisodePreviewCard {data} {zeroEpisode} bind:prompt={$prompt} bind:element={previewCard} />
   {/if}
@@ -232,8 +232,8 @@
   .mt-3 {
     margin-top: 0.3rem;
   }
-  .mb-150 {
-    margin-bottom: 15rem !important;
+  .mb-100 {
+    margin-bottom: 10rem !important;
   }
   .opacity-half {
     opacity: 30%;

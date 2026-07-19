@@ -2,7 +2,7 @@
   export let section = false
 </script>
 
-<div class='d-flex p-20 pb-10 position-relative wrapper content-visibility-auto' class:mb-150={section}>
+<div class='d-flex p-20 pb-10 position-relative wrapper content-visibility-auto' class:mb-100={section}>
   <div class='item load-in d-flex flex-column h-full'>
     <div class='image h-200 w-full rounded skeloader bg-ske'/>
     <div class='row pt-20'>
@@ -28,7 +28,7 @@
     height: 28.7rem;
     contain-intrinsic-height: 28.7rem;
   }
-  .mb-150 {
-    margin-bottom: 15rem !important;
+  .mb-100 {
+    margin-bottom: 10rem !important;
   }
 </style>

@@ -5,8 +5,8 @@
 {#await promise then res}
   {#if !res || res?.errors}
     {@const errors = res?.errors}
-    <div class='p-20 d-flex align-items-center justify-content-center w-full h-410'>
-      <div>
+    <div class='error-card p-20 d-flex align-items-center justify-content-center w-full h-387'>
+      <div class='{$$restProps.class}'>
         <h1 class='mb-5 text-white font-weight-bold text-center'>
           Ooops!
         </h1>
@@ -44,8 +44,8 @@
     </div>
   {/if}
 {:catch error}
-  <div class='p-20 d-flex align-items-center justify-content-center w-full h-410'>
-    <div>
+  <div class='error-card p-20 d-flex align-items-center justify-content-center w-full h-387'>
+    <div class='{$$restProps.class}'>
       <h1 class='mb-5 text-white font-weight-bold text-center'>
         Ooops!
       </h1>
@@ -60,7 +60,7 @@
 {/await}
 
 <style>
-  .h-410 {
-    height: 41rem;
+  .h-387 {
+    height: 38.7rem;
   }
 </style>

@@ -115,7 +115,7 @@
       {/each}
     {/if}
     {#if $preview?.length}
-      <ErrorCard promise={$preview[0].data} />
+      <ErrorCard promise={$preview[0].data} class='{opts.isRSS ? `mb-90` : ``}' />
     {/if}
   </div>
 </div>
@@ -145,7 +145,7 @@
     }
   }
   .position-relative.isRSS .gallery::after {
-    height: calc(100% - 15rem) !important;
+    height: calc(100% - 10rem) !important;
     z-index: 1;
   }
   .gallery:after {
@@ -165,7 +165,7 @@
     cursor: grab;
   }
   .mv-10 {
-    margin-top: -15rem !important;
+    margin-top: -10rem !important;
     z-index: 0 !important;
   }
   .gallery :global(.item.small-card) {
