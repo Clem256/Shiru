@@ -1,5 +1,5 @@
 import { SUPPORTS } from '@/modules/support.js'
-import { writable, readable } from 'simple-store-svelte'
+import { writable } from 'simple-store-svelte'
 import { cubicOut, cubicIn } from 'svelte/easing'
 import levenshtein from 'js-levenshtein'
 import Fuse from 'fuse.js'
@@ -102,15 +102,14 @@ export function createDeferred() {
 }
 
 /** Reactive root font size in pixels, updates when the document font size changes. */
-export const baseFontSize = readable(
-  typeof getComputedStyle !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) : 16,
-  (set) => {
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => set(parseFloat(getComputedStyle(document.documentElement).fontSize)))
+export const baseFontSize = (() => {
+  const store = writable(typeof getComputedStyle !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) : 16)
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(() => store.value = parseFloat(getComputedStyle(document.documentElement).fontSize))
     observer.observe(document.documentElement)
-    return () => observer.disconnect()
   }
-)
+  return store
+})()
 
 /**
  * Creates a Svelte action that observes DOM mutations on a node.

@@ -110,7 +110,7 @@
 
     window.addEventListener('pointerdown', onOutsideClick, true)
     window.addEventListener('keydown', onEscapeKey, true)
-    window.addEventListener('resize', position, true)
+    window.addEventListener('resize', () => requestAnimationFrame(() => requestAnimationFrame(position)), true)
   }
 
   /** Closes the panel and removes all global event listeners. */
