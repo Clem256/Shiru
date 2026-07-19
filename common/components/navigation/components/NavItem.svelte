@@ -47,7 +47,7 @@
         if ($playPage && ($page === page.PLAYER) && !($modal && modal.length)) playPage.set(false)
         if ($playPage) {
           page.navigateTo(page.PLAYER)
-        } else if ($modal[modal.ANIME_DETAILS]?.data?.id === $nowPlaying?.media?.id && modal.length === 1) {
+        } else if ($modal[modal.ANIME_DETAILS]?.data?.id === $nowPlaying?.media?.id && modal.focused === modal.ANIME_DETAILS) {
           modal.close(modal.ANIME_DETAILS)
         } else {
           modal.open(modal.ANIME_DETAILS, $nowPlaying?.media)
@@ -57,7 +57,7 @@
       return () => {
         closeDrawer()
         if (!$nowPlaying?.media) return
-        if ($modal[modal.ANIME_DETAILS]?.data?.id === $nowPlaying.media.id && modal.length === 1) {
+        if ($modal[modal.ANIME_DETAILS]?.data?.id === $nowPlaying?.media?.id && modal.focused === modal.ANIME_DETAILS) {
           modal.close(modal.ANIME_DETAILS)
         } else {
           modal.open(modal.ANIME_DETAILS, $nowPlaying.media)
