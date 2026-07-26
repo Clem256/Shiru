@@ -110,6 +110,10 @@
   .w-sm-265 {
     width: 26.5rem !important;
   }
+  .mx-sm-30 {
+    margin-left: 3rem !important;
+    margin-right: 3rem !important;
+  }
 }
 
 @media (max-height: 420px) {
@@ -164,7 +168,7 @@
     border: .1rem solid var(--gray-color-light)
   }
   .mr-md-80 {
-    margin-right: 8rem !important
+    margin-right: 8rem !important;
   }
   .pr-md-30 {
     padding-right: 3rem !important;
