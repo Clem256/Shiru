@@ -9,7 +9,7 @@
   import { slide } from 'svelte/transition'
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
-  import { TriangleAlert, CircleAlert, Github, Folder, FileQuestion, Trash2, CircleX, ChevronDown, ChevronUp, SquarePlus, Adult, Settings } from 'lucide-svelte'
+  import { TriangleAlert, CircleAlert, Github, Folder, FileQuestion, Trash2, CircleX, ChevronDown, ChevronUp, SquarePlus, Adult, Settings, RefreshCw } from 'lucide-svelte'
   export let settings
 
   const activeWorkers = extensionManager.activeWorkers
@@ -21,6 +21,7 @@
   $: viewSources = false
   $: viewSettings = {}
   $: pendingSource = false
+  $: pendingReload = false
   $: failedSource = null
   $: availableSources = (settings.extensionsNew && cache.getEntry(caches.EXTENSIONS, 'repositorySources')) || {}
   $: availableExtensions = (settings.extensionsNew && cache.getEntry(caches.EXTENSIONS, 'extensionSources')) || {}
@@ -70,6 +71,12 @@
     if (pendingSource) return
     pendingSource = true
     extensionManager.validateExtension(key).then(() => pendingSource = false)
+  }
+
+  async function reloadExtensions() {
+    pendingReload = true
+    await extensionManager.reloadExtensions()
+    pendingReload = false
   }
 
   function getSettingValue(key, settingKey, defaultValue) {
@@ -171,9 +178,18 @@
 </SettingCard>
 
 <h4 class='mb-10 font-weight-bold'>Extension Settings</h4>
+{#if $status !== 'offline' && Object.values(settings.extensionsNew).some(extension => extension?.enabled)}
+  {@const loading = pendingReload || pendingSource || Object.entries(settings.extensionsNew).some(([key, extension]) => extension?.enabled && !$activeWorkers[key] && !$inactiveWorkers[key])}
+  <div class='d-flex bg-dark-light rounded-3 p-4 mw-300 mb-5'>
+    <button type='button' class='btn btn-primary w-full rounded-3 overflow-hidden d-flex align-items-center justify-content-center font-scale-16' disabled={loading} class:cursor-wait={loading} use:click={reloadExtensions}>
+      <RefreshCw class='mr-10 {loading ? `spin` : ``}' size='1.8rem' />
+      <span class='text-truncate'>{pendingReload ? 'Reloading Extensions...' : 'Reload Extensions'}</span>
+    </button>
+  </div>
+{/if}
 <div class='d-flex bg-dark-light rounded-3 p-4 mw-300 mb-20'>
-  <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16' class:bg-primary={mainTab} class:bg-transparent={!mainTab} use:click={()=> { mainTab = true }}>Extensions</button>
-  <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16' class:bg-primary={!mainTab} class:bg-transparent={mainTab} use:click={()=> { mainTab = false; viewSettings = {} }}>Sources</button>
+  <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16 h-40' class:bg-primary={mainTab} class:bg-transparent={!mainTab} use:click={()=> { mainTab = true }}>Extensions</button>
+  <button type='button' class='btn w-150 rounded-3 shadow-none border-0 overflow-hidden text-truncate font-scale-16 h-40' class:bg-primary={!mainTab} class:bg-transparent={mainTab} use:click={()=> { mainTab = false; viewSettings = {} }}>Sources</button>
 </div>
 {#if mainTab}
   <div class='wm-1200 w-full'>
@@ -482,6 +498,9 @@
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+  :global(.spin) {
+    animation: spin 1s linear infinite;
   }
   .extension-disabled {
     opacity: .4;

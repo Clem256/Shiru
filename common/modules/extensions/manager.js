@@ -325,9 +325,12 @@ class ExtensionManager {
    * @throws {Error} If the extension fails validation or initialization.
    */
   async getExtensionCode(key, worker) {
+    const generation = this.whenReady
     const extension = (cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {})[key]
     let newCode = await getExtension(extension?.name || extension?.id, [extension?.main].flat().map(main => !main || VALID_SCHEMES.test(main) ? main : `${extension?.locale || [extension?.update].flat()[0]}/${main}`))
-    if (newCode && typeof newCode === 'string' && newCode.trim().length > 0) {
+    if (this.whenReady !== generation) {
+      worker.terminate()
+    } else if (newCode && typeof newCode === 'string' && newCode.trim().length > 0) {
       if (!extension.locale) {
         await cache.cacheEntry(caches.EXTENSIONS, key, { mappings: true }, newCode, Date.now() + getRandomInt(7, 14) * 24 * 60 * 60 * 1_000)
         try {
@@ -545,6 +548,7 @@ class ExtensionManager {
    * @returns {Promise<boolean>} True if successful, false otherwise.
    */
   async loadExtensions(extensions, update) {
+    const generation = this.whenReady
     const extensionIds = Object.keys(extensions || {})
     if (!extensionIds?.length) {
       this.whenReady.resolve(true)
@@ -603,14 +607,20 @@ class ExtensionManager {
               const remoteWorker = await wrap(worker)
               this.#pendingWorkers.set(key, remoteWorker)
               const initialize = await remoteWorker.initialize(key, extension.type, modules[key], { settings: settings.value.extensionsNew[key]?.settings ?? {}, bypassCORS: SUPPORTS.isAndroid })
-              if (!settings.value.extensionsNew[key]?.enabled) {
+              if (this.whenReady !== generation) {
+                remoteWorker.terminate()
+                return
+              } else if (!settings.value.extensionsNew[key]?.enabled) {
                 debug(`Extension ${key} was disabled during initialization, terminating...`)
                 remoteWorker.terminate()
                 return
               }
               if (!initialize.validated && initialize.stub) {
                 await this.getExtensionCode(key, remoteWorker)
-                if (this.activeWorkers.value[key] || !settings.value.extensionsNew[key]?.enabled) return
+                if (this.whenReady !== generation) {
+                  remoteWorker.terminate()
+                  return
+                } else if (this.activeWorkers.value[key] || !settings.value.extensionsNew[key]?.enabled) return
               }
               if (!initialize.validated) {
                 this.inactiveWorkers.update(value => ({ ...value, [key]: remoteWorker }))
