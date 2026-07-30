@@ -9,7 +9,7 @@ import { toast } from 'svelte-sonner'
 import { wrap } from 'comlink'
 import { parse } from 'tldts'
 import Debug from 'debug'
-const debug = Debug('ui:manager')
+const debug = Debug('ui:extension-manager')
 
 /** @type {RegExp} */
 export const CUSTOM_SCHEMES = /^(gh|npm):/
@@ -225,16 +225,19 @@ class ExtensionManager {
         if (sourcesOld.length && !sourcesNew.length) { sources = structuredClone(newSources); return }
         if (!sources && !sourcesNew.length) { this.whenReady.resolve(true); sources = {} }
         else if (sourcesNew.length) {
+          debug(!sources ? 'Loading persisted extension sources...' : 'Found new sources and updated...', JSON.stringify(newSources))
           sources = structuredClone(newSources)
           this.whenReady = createDeferred()
           this.updateExtensions(newSources, cache.getEntry(caches.EXTENSIONS, 'repositorySources') || {}).then(update => this.loadExtensions(cache.getEntry(caches.EXTENSIONS, 'extensionSources') ?? newSources, update)).catch(error => {
             printError('Failed to Update Extensions', 'Unable to check for updates or update extensions.', error)
             return this.loadExtensions(cache.getEntry(caches.EXTENSIONS, 'extensionSources') ?? newSources, false)
           })
-          debug('Found new sources and updated...', JSON.stringify(newSources))
         }
       }
     })
+
+    // check for extension updates every 3 hours.
+    setInterval(() => this.checkForUpdates(), 3 * 60 * 60 * 1_000).unref?.()
 
     let _status = navigator.onLine ? 'online' : 'offline'
     status.subscribe(async value => {
@@ -272,6 +275,34 @@ class ExtensionManager {
       }
       if (value === 'offline' || value === 'online') _status = value
     })
+  }
+
+  /**
+   * Periodically checks for extension and source repository updates, reloading anything that changed.
+   * Skips silently if offline or no extensions are installed yet.
+   *
+   * @returns {Promise<void>}
+   */
+  async checkForUpdates() {
+    if (status.value === 'offline') return
+    const extensionSources = cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}
+    if (!Object.keys(extensionSources).length) {
+      debug('Skipping periodic update check, no extensions installed')
+    } else {
+      debug('Running periodic extension update check...')
+      try {
+        const repositorySources = cache.getEntry(caches.EXTENSIONS, 'repositorySources') || {}
+        const updated = await this.updateExtensions(extensionSources, repositorySources)
+        if (updated) {
+          debug('Periodic update check found changes, reloading affected extensions...')
+          await this.loadExtensions(cache.getEntry(caches.EXTENSIONS, 'extensionSources') || {}, true)
+        } else {
+          debug('Periodic update check completed, no changes found')
+        }
+      } catch (error) {
+        await printError('Failed to check for extension updates', 'The periodic update check failed', error)
+      }
+    }
   }
 
   /**
@@ -713,7 +744,9 @@ class ExtensionManager {
       }
 
       // Check for extension source updates
-      const latestManifests = await Promise.all([...new Set(Object.values(currentExtensions).map(extension => extension?.locale || extension?.update).filter(Boolean))].map(url => getManifest(url, true)))
+      const updateUrls = [...new Set(Object.values(currentExtensions).map(extension => extension?.locale || extension?.update).filter(Boolean))]
+      debug(`Checking ${extensionIds.length} installed extension(s) for updates...`)
+      const latestManifests = await Promise.all(updateUrls.map(url => getManifest(url, true)))
       const validManifests = latestManifests.filter(manifest => manifest != null && Array.isArray(manifest))
       if (validManifests.length === 0) {
         debug('No valid manifests retrieved during update check, skipping update')
