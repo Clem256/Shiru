@@ -46,7 +46,7 @@
     modal.open(modal.ANIME_DETAILS, media)
   }
   function setClickState() {
-    const episode = isValidNumber(data.episode) ? data.episode : (media?.episodes === 1 && media?.episodes)
+    const episode = isValidNumber(data.episode) ? data.episode : ((media?.episodes === 1 && media?.episodes) || (!media?.episodes && (media?.format === 'MOVIE' || media?.format === 'OVA' || media?.format === 'SPECIAL') && 1))
     if (!$prompt && !data.similarity && isValidNumber(episode) && !Array.isArray(episode) && (episode - 1) >= 1 && media?.mediaListEntry?.status !== 'COMPLETED' && (media?.mediaListEntry?.progress || -1) < (episode - 1)) prompt.set(true)
     else isValidNumber(episode) ? (media ? playActive(data.hash, { media, episode: episode }, data.link, !data.link) : data.onclick()) : viewMedia()
     clicked.set(true)
@@ -55,7 +55,7 @@
   function setHoverState (state, tapped) {
     const focused = document.activeElement
     if (container && focused?.offsetParent != null && (container.contains(focused)) && (!previewCard || !previewCard.contains(focused))) ignoreFocus = true
-    const episode = isValidNumber(data.episode) ? data.episode : (media?.episodes === 1 && media?.episodes)
+    const episode = isValidNumber(data.episode) ? data.episode : ((media?.episodes === 1 && media?.episodes) || (!media?.episodes && (media?.format === 'MOVIE' || media?.format === 'OVA' || media?.format === 'SPECIAL') && 1))
     if (!$prompt && !data.similarity && isValidNumber(episode) && !Array.isArray(episode) && (episode - 1) >= 1 && media?.mediaListEntry?.status !== 'COMPLETED' && (media?.mediaListEntry?.progress || -1) < (episode - 1)) prompt.set(!!tapped)
     if (!$prompt || !$clicked) {
       preview = state
