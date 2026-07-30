@@ -167,6 +167,10 @@
   .border-md {
     border: .1rem solid var(--gray-color-light)
   }
+  .mx-md-30 {
+    margin-left: 3rem !important;
+    margin-right: 3rem !important;
+  }
   .mr-md-80 {
     margin-right: 8rem !important;
   }

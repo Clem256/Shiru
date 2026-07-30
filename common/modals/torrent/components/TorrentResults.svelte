@@ -164,6 +164,7 @@
   export let search
   export let close
 
+  let container
   let containerEl
   let countdown = 5
   let timeoutHandle
@@ -245,6 +246,7 @@
   }
 
   async function queryExtensions(request, resolution) {
+    scrollTop()
     $results = {}
     const cachedHashes = []
     for (const resolvedHash of getHash(search?.media?.id, { episode: search?.episode, client: true, batchGuess: true }, false, true, true) ?? []) {
@@ -295,6 +297,7 @@
 
   let scraping = false
   async function handleScrape() {
+    scrollTop()
     if (!$results?.resolved || !$results?.torrents?.length || scraping) return
     toast.promise(
       (async () => {
@@ -326,9 +329,9 @@
   $: resolution = $settings.rssQuality
   $: queries = queryExtensions({...search}, resolution)
   $: errors = getErrors({...search}, queries)
-
   $: queryResults = sortResults($results?.torrents, $settings.torrentSort, batch)
   $: lookup = queryResults?.results
+  $: (episodeSearch || resolution || $settings.torrentSort || $settings.audioLanguage) && scrollTop()
 
   $: best = null
   let current = 0
@@ -380,6 +383,10 @@
     if ($settings.rssAutoplay) countdown = 5
   }
 
+  function scrollTop() {
+    container?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   onDestroy(() => {
     clearTimeout(timeoutHandle)
     viewHidden = false
@@ -392,7 +399,7 @@
     errorCardOnly = false
   })
 </script>
-<div bind:this={containerEl}>
+<div class='h-full overflow-hidden d-flex flex-column' bind:this={containerEl}>
   <div class='controls w-full bg-very-dark position-sticky top-0 z-10 pt-md-wh-20 pb-5 px-30 mb-10'>
     <div class='d-flex'>
       <h3 class='mb-0 font-weight-bold text-white title mr-5 font-scale-40'>{anilistClient.title(search?.media)}</h3>
@@ -501,7 +508,7 @@
       </div>
     </div>
   </div>
-  <div class='mt-15 mb-sm-15 px-30'>
+  <div bind:this={container} class='scroll-container h-full px-30 overflow-y-scroll'>
     {#await errors then errorResult}
       {#if errorResult?.errorCardOnly && $results?.resolved && !$results?.torrents?.length}
         <div class='mt-80'>
@@ -580,9 +587,19 @@
   .unavailable {
     opacity: 0.6;
   }
-
-  .controls {
-    box-shadow: 0 1rem 1rem var(--dark-color-dim);
+  .controls::after {
+    content: '';
+    position: absolute;
+    bottom: -2.2rem;
+    left: 0;
+    right: 0;
+    height: 1.2rem;
+    background: linear-gradient(to bottom, var(--dark-color-dim), transparent);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .scroll-container :global(> *:first-child) {
+    margin-top: 1rem !important;
   }
   .title {
     display: inline-block;

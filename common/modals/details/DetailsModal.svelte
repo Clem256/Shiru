@@ -147,7 +147,7 @@
   })
 </script>
 
-<SoftModal class='m-0 w-full h-full rounded bg-very-dark pt-0 mx-sm-30 scrollbar-none' bind:showModal={staticMedia} {close} id={modal.ANIME_DETAILS}>
+<SoftModal class='m-0 w-full h-full rounded bg-very-dark pt-0 mx-sm-20 mx-md-30 scrollbar-none' bind:showModal={staticMedia} {close} id={modal.ANIME_DETAILS}>
   <button class='btn btn-square rounded-circle w-40 h-40 close pointer z-30 bg-dark-very-light top-20 right-0 position-fixed mr-navigation-safe-area d-flex align-items-center justify-content-center text-white' type='button' use:click={() => close()}>
     <X size='1.7rem' strokeWidth='3' />
   </button>
