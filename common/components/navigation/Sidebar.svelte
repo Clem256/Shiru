@@ -3,19 +3,17 @@
   import NavItem from '@/components/navigation/components/NavItem.svelte'
   import NavLink from '@/components/navigation/components/NavLink.svelte'
   import NavBar from '@/components/navigation/components/NavBar.svelte'
+  import { page, drawerOpen } from '@/modules/navigation.js'
   import { ELECTRON, COMMON } from '@/modules/bridge.js'
   import { fadeIn, fadeOut } from '@/modules/util.js'
   import { MoveLeft, MoveRight } from 'lucide-svelte'
   import { settings } from '@/modules/settings.js'
   import { status } from '@/modules/networking.js'
   import { click } from '@/modules/lib/click.js'
-  import { page } from '@/modules/navigation.js'
   import { writable } from 'simple-store-svelte'
 
   /** @type {import('simple-store-svelte').Writable<string[]>} */
   const drawerItems = writable([])
-  /** @type {import('simple-store-svelte').Writable<boolean>} */
-  const drawerOpen = writable(false)
 
   /**
    * Previous network status value used to detect changes

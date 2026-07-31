@@ -7,6 +7,8 @@ const debug = Debug('ui:history')
 
 /** @type {import('simple-store-svelte').Writable<Array<object>>} */
 export const files = writable([])
+/** @type {import('simple-store-svelte').Writable<boolean>} */
+export const drawerOpen = writable(false)
 
 /**
  * @typedef {Object} PageStore
@@ -288,6 +290,9 @@ class HistoryManager {
         debug('Back was pressed while in fullscreen, skipping navigation and exiting fullscreen...')
         document.exitFullscreen()
         return
+      } else if (drawerOpen.value) {
+        drawerOpen.set(false)
+        return
       }
 
       if (canGoBack.value) this.goBack()
@@ -368,6 +373,11 @@ class HistoryManager {
    */
   goBack(skipLock = false) {
     debug('goBack called', JSON.stringify({ currentIndex: this.currentIndex }))
+    if (drawerOpen.value) {
+      drawerOpen.set(false)
+      debug('Called goBack but navigation drawer is open, closing...')
+      return
+    }
     if (!skipLock) {
       if (this.navigationLocked) {
         debug('goBack ignored, navigation cooldown active')
@@ -416,6 +426,7 @@ class HistoryManager {
       this.lockNavigation()
     }
     if (this.currentIndex < this.history.length - 1) {
+      drawerOpen.set(false)
       let next = this.history[this.currentIndex + 1]
       if (next?.isTemp) {
         debug('Navigating to temp forward entry', JSON.stringify(next))

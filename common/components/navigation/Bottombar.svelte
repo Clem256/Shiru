@@ -1,14 +1,13 @@
 <script>
   import NavItem from '@/components/navigation/components/NavItem.svelte'
   import NavBar from '@/components/navigation/components/NavBar.svelte'
+  import { drawerOpen } from '@/modules/navigation.js'
   import { fadeIn, fadeOut } from '@/modules/util.js'
   import { click } from '@/modules/lib/click.js'
   import { writable } from 'simple-store-svelte'
 
   /** @type {import('simple-store-svelte').Writable<string[]>} */
   const drawerItems = writable([])
-  /** @type {import('simple-store-svelte').Writable<boolean>} */
-  const drawerOpen = writable(false)
 
   /** Closes the overflow drawer */
   function closeDrawer() {

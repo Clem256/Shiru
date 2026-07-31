@@ -94,6 +94,7 @@
   function onPointerDown(event) {
     if (!drawerOpen) return
     if ((sidebar ? event.target.closest('.sidebar') : event.target.closest('.navbar')) || event.target.closest('.drawer')) return
+    if (event.target.closest('.more-icon')) return
     closeDrawer()
   }
 
