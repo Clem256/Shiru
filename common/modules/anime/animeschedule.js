@@ -213,7 +213,7 @@ class AnimeSchedule {
         } catch (e) {
             if (!res || res.status !== 404) throw e
         }
-        if (!res.ok && (res.status === 429 || res.status === 500)) throw res
+        if (!res.ok && (res.status === 429 || res.status >= 500)) throw res
         let json = null
         try {
             json = await res.json()

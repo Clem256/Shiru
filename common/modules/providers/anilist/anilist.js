@@ -5,7 +5,7 @@ import Bottleneck from 'bottleneck'
 import { alToken, settings, validateToken } from '@/modules/settings.js'
 import { malDubs } from '@/modules/anime/animedubs.js'
 import { isSubbedProgress, getMediaMaxEp } from '@/modules/anime/anime.js'
-import { getRandomInt, sleep, debounce, uniqueStore, normalizeASCII } from '@/modules/util.js'
+import { getRandomInt, sleep, debounce, uniqueStore, normalizeASCII, codes } from '@/modules/util.js'
 import { printError, status } from '@/modules/networking.js'
 import { cache, caches, mediaCache } from '@/modules/cache.js'
 import { MutationQueue } from '@/modules/providers/lib/mutationqueue.js'
@@ -178,18 +178,23 @@ class AnilistClient {
 
   constructor() {
     debug('Initializing Anilist Client for ID ' + this.userID?.viewer?.data?.Viewer?.id)
-    this.limiter.on('failed', async (error) => {
+    this.limiter.on('failed', async (error, jobInfo) => {
       if (status.value.match(/offline/i)) throw new Error('Failed making request to Anilist, network is offline... not retrying')
-      else await printError('Search Failed', 'Failed making request to Anilist!\nTry again in a minute.', error)
-      if (error.status === 500) return 1
+      else if (error.status === 429 || jobInfo.retryCount >= 1) await printError('Search Failed', 'Failed making request to Anilist!\nTry again in a minute.', error)
+      const errorDebug = `Error: ${error.status || 429} - ${error.message || error.statusText || codes[error.status || 429]}`
 
-      if (!error.statusText) {
-        if (!this.rateLimitPromise) this.rateLimitPromise = sleep(61 * 1_000).then(() => { this.rateLimitPromise = null })
-        return 61 * 1_000
+      if (error.status === 429) { // rate limited...
+        const time = (Number(error.headers.get('retry-after') || 60) + 1) * 1_000
+        if (!this.rateLimitPromise) this.rateLimitPromise = sleep(time).then(() => { this.rateLimitPromise = null })
+        return time
       }
-      const time = (Number((error.headers.get('retry-after') || 60)) + 1) * 1_000
-      if (!this.rateLimitPromise) this.rateLimitPromise = sleep(time).then(() => { this.rateLimitPromise = null })
-      return time
+
+      if (jobInfo.retryCount >= 1) { // give up after 2 total attempts, let it reject so callers can fall back
+        debug(`Giving up on request after ${jobInfo.retryCount + 1} attempts`, errorDebug)
+        return
+      }
+
+      return 2_000 + 6_000 * jobInfo.retryCount // initial 2s delay, +6s per subsequent retry, for 500/502/503/504 etc
     })
 
     if (this.userID?.viewer?.data?.Viewer) {
@@ -245,7 +250,7 @@ class AnilistClient {
     } catch (e) {
       if (!res || res.status !== 404) throw e
     }
-    if (!res.ok && (res.status === 429 || res.status === 500)) {
+    if (!res.ok && (res.status === 429 || res.status >= 500)) {
       throw res
     }
     let json = null

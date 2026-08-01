@@ -134,8 +134,9 @@ export default new class AnimeResolver {
    * resolve anime name based on file name and store it
    * @param {import('anitomyscript').AnitomyResult[]} parseObjects
    * @param retry
+   * @param errorRetry
    */
-  async findAnimesByTitle (parseObjects, retry = false) {
+  async findAnimesByTitle (parseObjects, retry = false, errorRetry = false) {
     if (!parseObjects.length) return
     const titleObjects = parseObjects.flatMap(obj => {
       const key = this.getCacheKeyForTitle(obj)
@@ -159,7 +160,7 @@ export default new class AnimeResolver {
     // Handle resolving titles during AniList API outage and while offline.
     // Works pretty well but has edge cases that cause it to choose incorrect media, primarily issues with sequel series like Shield Hero.
     // TODO: Improve accuracy so we can utilize this while online.
-    if (status.value.match(/offline/i)) {
+    if (status.value.match(/offline/i) || errorRetry) {
       debug('Detected that AniList API is down or network is offline, attempting to resolve titles from cache.')
       missingTitles = []
       for (const titleObj of titleObjects) {
@@ -183,6 +184,7 @@ export default new class AnimeResolver {
     }
 
     if (missingTitles?.length > 0) debug(`Missing ${missingTitles?.length} titles as they were not found in the media cache, titles: ${missingTitles?.map(obj => `${obj.title} (year: ${obj.year ?? 'N/A'}, isAdult: ${obj.isAdult})`).join(', ')}`)
+    if (errorRetry) return
     for (const chunk of chunks(missingTitles, 55)) {
       // single title has a complexity of 8.1, al limits complexity to 500, so this can be at most 62, undercut it to ~~60~~ 55, al pagination is 50, but at most we'll do 30 titles since isAdult duplicates each title
       let search
@@ -198,8 +200,8 @@ export default new class AnimeResolver {
             return
           }
         }
-        debug('Failed to compound search and the network is online.')
-        throw error
+        debug('Failed to compound search and the network is online, forcing a search using cache...')
+        return this.findAnimesByTitle(parseObjects, true, true)
       }
       if (!search || search?.errors) return
       for (const [key, media] of search) {

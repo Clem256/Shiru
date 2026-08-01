@@ -9,10 +9,23 @@ let offlineController = new AbortController()
 const OFFLINE_ABORT_REASON = new DOMException('Failed to fetch: client is offline', 'AbortedOffline')
 
 export const status = writable(navigator.onLine ? 'online' : 'offline')
+
+const recentErrors = new Map()
+
+/**
+ * @param {string} title
+ * @param {string} description
+ * @param {{ status?: number, message?: string }} error
+ */
 export async function printError(title, description, error) {
   if (error.status !== 429 && (await isOffline(error) || await isAnilistDown(error))) return
   trace(`Error: ${error.status || 429} - ${error.message || codes[error.status || 429]}`)
   if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Errors')) {
+    const key = `${title}:${description}:${error.status || 429}:${error.message || codes[error.status || 429]}`
+    if (recentErrors.has(key)) return
+    const timeout = setTimeout(() => recentErrors.delete(key), 10_000)
+    timeout.unref?.()
+    recentErrors.set(key, timeout)
     toast.error(title, {
       description: `${description ? description + '\n' : ''}${error.status || 429} - ${error.message || codes[error.status || 429]}`,
       duration: 10_000

@@ -950,7 +950,7 @@ export async function getKitsuMappings(anilistID) {
       } catch (e) {
         if (!res || res.status !== 404) throw e
       }
-      if (!res.ok && (res.status === 429 || res.status === 500)) {
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
         throw res
       }
       let json = null
@@ -1022,7 +1022,7 @@ export async function getAniMappings(anilistID) {
       } catch (e) {
         if (!res || res.status !== 404) throw e
       }
-      if (!res.ok && (res.status === 429 || res.status === 500)) {
+      if (!res.ok && (res.status === 429 || res.status >= 500)) {
         throw res
       }
       let json = null

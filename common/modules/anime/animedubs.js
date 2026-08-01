@@ -46,7 +46,7 @@ class MALDubs {
             } catch (error) {
                 if (!res || res.status !== 404) throw error
             }
-            if (!res.ok && (res.status === 429 || res.status === 500)) throw res
+            if (!res.ok && (res.status === 429 || res.status >= 500)) throw res
             let json = null
             try {
                 json = await res.json()
