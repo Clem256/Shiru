@@ -1058,6 +1058,12 @@ img[src=''], img[src=' '] {
 .pl-40 {
   padding-left: 4rem;
 }
+.pt-60 {
+  padding-top: 6rem !important;
+}
+.pb-60 {
+  padding-bottom: 6rem !important;
+}
 
 .py-6px {
   padding: 0 6px;

@@ -10,10 +10,11 @@
   const debug = Debug('ui:changelog-view')
 
   export let latestVersion
-  export let updateChannel = writable(settings.value.updateChannel ?? 'stable')
+  /** @type {import('simple-store-svelte').Writable<"stable" | "nightly">} */
+  export let updateChannel = writable(/** @type {"stable" | "nightly"} */ (settings.value.updateChannel ?? 'stable'))
   export let changeLog = writable(getChanges())
 
-  uniqueStore(updateChannel).subscribe((channel) => {
+  uniqueStore(updateChannel).subscribe(channel => {
     changeLog.set(getChanges())
     setTimeout(() => COMMON.setUpdateChannel(channel))
   })
@@ -21,7 +22,13 @@
   window.addEventListener('online', () => changeLog.set(getChanges()))
 
   settings.subscribe(value => {
-    if (value.updateChannel !== updateChannel.value) updateChannel.set(value.updateChannel)
+    if (value.updateChannel !== updateChannel.value) {
+      settings.update(current => {
+        current.updateVersion = undefined
+        return current
+      })
+      updateChannel.set(/** @type {"stable" | "nightly"} */ (value.updateChannel))
+    }
   })
 
   const startedAt = Date.now()

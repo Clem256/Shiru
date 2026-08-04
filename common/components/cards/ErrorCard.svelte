@@ -1,11 +1,12 @@
 <script>
   export let promise
+  export let containerClass = ''
 </script>
 
 {#await promise then res}
   {#if !res || res?.errors}
     {@const errors = res?.errors}
-    <div class='error-card p-20 d-flex align-items-center justify-content-center w-full h-387'>
+    <div class='error-card p-20 d-flex align-items-center justify-content-center w-full h-387 {containerClass}'>
       <div class='{$$restProps.class}'>
         <h1 class='mb-5 text-white font-weight-bold text-center'>
           Ooops!
@@ -16,6 +17,8 @@
               No results found.
             {:else if (JSON.stringify(errors)?.match(/extension is not enabled/i) && !errors?.filter(error => !error?.message.match(/extension is not enabled/i))?.length) || JSON.stringify(errors)?.match(/sources configured/i)}
               No Extensions Installed
+            {:else if JSON.stringify(errors)?.match(/changelog unavailable/i)}
+              Changelog Unavailable
             {:else if errors?.length === 1 && Array.isArray(errors[0].message)}
               {errors[0].message[0]}
             {:else if errors}
@@ -30,6 +33,8 @@
             It looks like you haven't added any extension sources, manage your extensions in the settings.
           {:else if JSON.stringify(errors)?.match(/found no results/i)}
             You can manually specify a torrent by providing a link or file.
+          {:else if JSON.stringify(errors)?.match(/changelog unavailable/i)}
+            The repository may be gone or access is currently being blocked or limited, but you can still update using the button below.
           {:else if errors?.length === 1 && Array.isArray(errors[0].message)}
            {#each errors[0].message.slice(1) as message}
              <div>{message}</div>
@@ -44,7 +49,7 @@
     </div>
   {/if}
 {:catch error}
-  <div class='error-card p-20 d-flex align-items-center justify-content-center w-full h-387'>
+  <div class='error-card p-20 d-flex align-items-center justify-content-center w-full h-387 {containerClass}'>
     <div class='{$$restProps.class}'>
       <h1 class='mb-5 text-white font-weight-bold text-center'>
         Ooops!

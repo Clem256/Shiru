@@ -6,6 +6,7 @@
   import { SUPPORTS } from '@/modules/support.js'
   import UpdatelogSk from '@/components/skeletons/UpdatelogSk.svelte'
   import SoftModal from '@/components/modals/SoftModal.svelte'
+  import ErrorCard from '@/components/cards/ErrorCard.svelte'
   import Changelog, { changeLog, latestVersion, updateChannel, getReleaseByTag } from '@/routes/settings/components/Changelog.svelte'
   import { settings } from '@/modules/settings.js'
   import { page, modal } from '@/modules/navigation.js'
@@ -84,8 +85,8 @@
 
   const updateProgress = writable(0)
   COMMON.onUpdateProgress((progress) => updateProgress.set(progress))
-  setTimeout(() => COMMON.checkForUpdates(updateChannel.value), 2_500).unref?.()
-  setInterval(() => COMMON.checkForUpdates(updateChannel.value), 300_000).unref?.()
+  setTimeout(() => COMMON.checkForUpdates(updateChannel.value), 2.5 * 1_000).unref?.()
+  setInterval(() => COMMON.checkForUpdates(updateChannel.value), 30 * 60 * 1_000).unref?.()
 </script>
 <script>
   $: $updateState === 'ready' && modal.open(modal.UPDATE_PROMPT)
@@ -102,7 +103,7 @@
     if (updating) return
     if (ignored) {
       $updateState = 'ignored'
-      settings.value.updateVersion = updateVersion.value
+      $settings.updateVersion = updateVersion.value
     }
     modal.close(modal.UPDATE_PROMPT)
   }
@@ -155,7 +156,7 @@
       {#await getChangelog($updateVersion)}
         <div class='skeloader rounded w-120 h-20 bg-ske'/>
       {:then changelog}
-        {#if changelog?.entry}
+        {#if changelog?.entry?.date}
           <div class='font-size-14 text-muted'>{new Date(changelog.entry.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
         {/if}
       {:catch}
@@ -206,6 +207,8 @@
           <h4 class='font-weight-bold text-white mb-15'>What's New</h4>
           <Changelog class='ml-10' body={changelog.entry.body} />
         </div>
+      {:else}
+        <ErrorCard promise={{ errors: [{ message: 'changelog unavailable' }] }} containerClass='h-auto pt-60 {SUPPORTS.isAndroid ? `pb-60` : `pb-0`}' />
       {/if}
       {#if changelog?.nightlies?.length > 0}
         <hr class='my-20'/>
@@ -220,7 +223,7 @@
           </div>
         </div>
       {/if}
-      <div class='mt-10 mb-20'><span class='custom-link font-weight-bold d-flex' class:d-none={!changelog?.entry?.url} use:click={() => COMMON.openURI(changelog.entry.url)}>View on GitHub <ExternalLink class='ml-10' size='1.8rem' /></span></div>
+      <div class='mt-10 mb-20'><span class='custom-link font-weight-bold d-none' class:d-flex={changelog?.entry?.url} use:click={() => COMMON.openURI(changelog.entry.url)}>View Release <ExternalLink class='ml-10' size='1.8rem' /></span></div>
       <div class='mt-30 mb-20 font-italic' class:d-none={!SUPPORTS.isAndroid}>{deliveryText}</div>
     </div>
   {:catch}
