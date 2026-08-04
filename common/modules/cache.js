@@ -101,8 +101,8 @@ function open(dbName) {
         for (const { key, shared } of Object.values(caches)) {
           if (!!shared === isShared && !database.objectStoreNames.contains(key)) database.createObjectStore(key, { keyPath: 'key' })
         }
-        if (oldVersion < version) migrationStatus.set('Getting everything ready, this may take a moment...')
-        if (!isShared && oldVersion < 2) migration = UPGRADE_V1_TO_V2(database, versionTx)
+        if (oldVersion > 0 && oldVersion < version) migrationStatus.set('Getting everything ready, this may take a moment...')
+        if (!isShared && oldVersion === 1) migration = UPGRADE_V1_TO_V2(database, versionTx)
       }
     }))
   }
