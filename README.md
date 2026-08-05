@@ -1,6 +1,6 @@
 <p align="center">
 	<a href="https://github.com/RockinChaos/Shiru">
-		<img src="../.github/docs/assets/logo_filled.svg" width="400" alt="Shiru">
+		<img src=".github/docs/assets/logo_filled.svg" width="400" alt="Shiru">
 	</a>
 </p>
 <h4 align="center"><b>A personal anime library manager for watching and tracking your collection in real time. Lightweight, powerful, and paws-itively fast. No waiting required!</b></h4>
@@ -17,7 +17,7 @@
   <a href="https://github.com/RockinChaos/Shiru/releases/latest/"><img alt="Latest Release" src="https://img.shields.io/github/v/release/RockinChaos/Shiru?style=flat-square"></a>
   <a href="https://github.com/RockinChaos/Shiru/commits"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/RockinChaos/Shiru?style=flat-square"></a>
   <a href="https://github.com/RockinChaos/Shiru/stargazers"><img alt="Stargazers" src="https://img.shields.io/github/stars/RockinChaos/Shiru?style=flat-square"></a>
-  <a href="../LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/github/license/RockinChaos/Shiru?style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/github/license/RockinChaos/Shiru?style=flat-square"></a>
 </p>
 
 https://github.com/user-attachments/assets/3ff100f0-e008-4ff5-88f5-ad4290863f96
@@ -249,4 +249,4 @@ Credit to [NoCrypt](https://github.com/NoCrypt) for doing the legwork on this.
 
 ## 📜 License
 
-This project follows the [GPLv3 License](../LICENSE).
+This project follows the [GPLv3 License](LICENSE).
