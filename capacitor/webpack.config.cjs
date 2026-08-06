@@ -66,7 +66,16 @@ const capacitorConfig = {
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
-        { from: join(__dirname, 'public', 'nodejs') }
+        {
+          from: join(__dirname, 'public', 'nodejs'),
+          globOptions: {
+            ignore: [
+              '**/Dockerfile',
+              '**/setup-deps.sh',
+              '**/package-lock.json'
+            ]
+          }
+        }
       ]
     })
   ]

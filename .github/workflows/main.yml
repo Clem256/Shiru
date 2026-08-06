@@ -204,9 +204,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install node-pre-gyp
-        run: pnpm install -g node-pre-gyp
-
       - name: Build Native + Web
         run: pnpm run build:app
 
