@@ -26,6 +26,7 @@
     "html-webpack-plugin": "^5.6.8",
     "mini-css-extract-plugin": "^2.10.2",
     "semver": "^7.8.5",
+    "uint8-util": "^2.3.2",
     "webpack": "^5.109.2",
     "webpack-cli": "^7.2.2",
     "webpack-dev-server": "^6.0.0"
@@ -52,7 +53,6 @@
       "electron",
       "electron-winstaller",
       "fs-native-extensions",
-      "fsctl",
       "ip-set",
       "node-datachannel",
       "sharp",
