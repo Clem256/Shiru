@@ -32,7 +32,7 @@
   }
 </script>
 
-<SoftModal class='fluid-min-width mh-full d-flex flex-column rounded bg-very-dark pt-0 px-5 px-md-20 mt-safe-area scrollbar-none' bind:showModal={$modal[modal.FILE_MANAGER]} {close} id={modal.FILE_MANAGER}>
+<SoftModal class='fluid-min-width mh-full d-flex flex-column rounded bg-very-dark pt-0 px-5 px-md-20 scrollbar-none' innerCss='pt-safe-area' bind:showModal={$modal[modal.FILE_MANAGER]} {close} id={modal.FILE_MANAGER}>
   <div class='d-flex mt-10 mb-10'>
     <div class='mb-0 mr-5 ml-20'>
       <h3 class='mb-0 font-weight-bold text-white title font-size-24'>File Manager</h3>
