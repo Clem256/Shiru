@@ -5,10 +5,10 @@
 # It cross-compiles native modules for arm, arm64, and x86_64 Android targets
 
 if [ -d "node_modules" ]; then
-    echo "node_modules already exists, skipping npm install"
-else
-    npm install
+    echo "node_modules already exists, removing for a clean install"
+    rm -rf node_modules
 fi
+npm install
 
 toolchain_folder=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin
 export PATH=$toolchain_folder:$PATH
@@ -26,7 +26,7 @@ for ((i=0;i<${#toolchain_target_archs[@]};i++)); do
   export CXX=$toolchain_folder/${toolchain_target_arch}-linux-android${android_api_level}-clang++
   export LINK=$toolchain_folder/${toolchain_target_arch}-linux-android${android_api_level}-clang++
   export AR=$toolchain_folder/llvm-ar
-  
+
   export npm_config_verbose=1
   export npm_config_nodedir=${LIBNODE_PATH}
   export npm_config_node_gyp=$(pwd)/node_modules/nodejs-mobile-gyp/bin/node-gyp.js
@@ -34,7 +34,7 @@ for ((i=0;i<${#toolchain_target_archs[@]};i++)); do
   export npm_config_plaform=android
   export npm_config_format=make-android
   export npm_gyp_defines="target_arch=$node_target_arch v8_target_arch=$node_target_arch android_target_arch=$node_target_arch host_os=linux OS=android"
-  
+
   # --build-from-source is used by node-pre-gyp
   echo "Rebuilding for $node_target_arch"
   npm rebuild --build-from-source
