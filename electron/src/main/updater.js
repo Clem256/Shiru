@@ -25,7 +25,7 @@ export default class Updater {
   hasUpdate = false
   downloading = false
   skipFallback = false
-  isManualInstall = process.platform === 'darwin' || !!process.env.FLATPAK_ID
+  isManualInstall = process.platform === 'darwin' || !!process.env.FLATPAK_ID || !!process.env.PORTABLE_EXECUTABLE_FILE
 
   window
   torrentWindow

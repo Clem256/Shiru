@@ -113,7 +113,7 @@ contextBridge.exposeInMainWorld('common', {
     flatpak: process.env.FLATPAK_ID,
     session: process.env.XDG_SESSION_TYPE || '',
     development: process.env.NODE_ENV?.trim() === 'development',
-    manualInstall: process.platform === 'darwin' || !!process.env.FLATPAK_ID
+    manualInstall: process.platform === 'darwin' || !!process.env.FLATPAK_ID || !!process.env.PORTABLE_EXECUTABLE_FILE
   }),
   getDeviceInfo: () => ipcRenderer.invoke('common:getDeviceInfo'),
   exportLog: () => ipcRenderer.invoke('common:exportLog'),
