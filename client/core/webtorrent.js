@@ -292,7 +292,7 @@ export default class TorrentClient extends WebTorrent {
     const timeout = setTimeout(() => {
       const seeders = torrent?.wires?.filter(wire => wire.isSeeder)?.length
       if (!this.destroyed && !torrent.destroyed && torrent.current && !torrent.progress && !torrent.ready && torrent.numPeers === 0 && this.networking !== 'offline') this.dispatchError('No peers found, try using a different torrent.')
-      else if (!this.destroyed && !torrent.destroyed && torrent.current && torrent.progress < .95 && isValidNumber(seeders) && seeders.length < 5 && isValidNumber(torrent.numPeers) && torrent.numPeers < 25 && this.networking !== 'offline') this.dispatch('info', 'Availability Warning! This release is poorly seeded and likely will have playback issues such as buffering!')
+      else if (!this.destroyed && !torrent.destroyed && torrent.current && torrent.progress < .95 && isValidNumber(seeders) && seeders < 5 && isValidNumber(torrent.numPeers) && torrent.numPeers < 25 && this.networking !== 'offline') this.dispatch('info', 'Availability Warning! This release is poorly seeded and likely will have playback issues such as buffering!')
     }, 30_000)
     this.timeouts.push(timeout)
     timeout.unref?.()
