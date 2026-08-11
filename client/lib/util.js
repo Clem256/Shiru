@@ -7,14 +7,24 @@ import { statSync } from 'fs'
 import path from 'path'
 import os from 'os'
 
+/** @type {boolean} */
+export const isFlatpak = !!process.env.FLATPAK_ID
+
 /**
  * Temporary directory path for WebTorrent usage (used for fallback).
  */
 export let TMP
 try {
-  TMP = path.join(statSync('/tmp') && '/tmp', 'webtorrent')
+  const base = isFlatpak ? // flatpak "/tmp" gets wiped on every restart... so best to avoid it.
+    (process.env.XDG_CACHE_HOME || path.join(typeof os.homedir === 'function' ? os.homedir() : '/', '.cache'))
+    : '/tmp'
+  TMP = path.join(statSync(base) && base, 'webtorrent')
 } catch (err) {
-  TMP = path.join(typeof os.tmpdir === 'function' ? os.tmpdir() : '/', 'webtorrent')
+  try {
+    TMP = path.join(statSync('/tmp') && '/tmp', 'webtorrent')
+  } catch (err) {
+    TMP = path.join(typeof os.tmpdir === 'function' ? os.tmpdir() : '/', 'webtorrent')
+  }
 }
 
 /**

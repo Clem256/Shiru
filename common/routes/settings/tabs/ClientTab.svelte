@@ -60,7 +60,7 @@
       <button type='button' use:click={setTorrentPath} class='btn btn-primary input-group-append d-flex align-items-center justify-content-center' title='Select a folder to store the torrents'><span>Select Folder</span></button>
     </div>
     {#if !SUPPORTS.isAndroid}
-      <input type='url' class='form-control bg-dark mw-100 text-truncate' readonly bind:value={settings.torrentPathNew} placeholder='/tmp' />
+      <input type='url' class='form-control bg-dark mw-100 text-truncate' readonly bind:value={settings.torrentPathNew} placeholder={(!!COMMON.getPlatformInfo().flatpak) ? '~/.var/app/com.github.rockinchaos.shiru/cache/webtorrent' : '/tmp'} />
     {:else}
       <input type='text' class='form-control bg-dark mw-100 text-truncate' bind:value={settings.torrentPathNew} disabled={true} placeholder='/tmp' />
     {/if}
