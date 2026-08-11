@@ -8,7 +8,6 @@
   import { episodesList } from '@/modules/episodes.js'
   import AnimeResolver from '@/modules/anime/animeresolver.js'
   import { durationMap, getMediaMaxEp } from '@/modules/anime/anime.js'
-  import { writable } from 'simple-store-svelte'
   import { createEventDispatcher } from 'svelte'
   import Subtitles from '@/modules/subtitles.js'
   import { toTS, fastPrettyBytes, capitalize, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
@@ -565,6 +564,7 @@
     const delta = direction === 'up' ? 0.05 : -0.05
     wheelAccumulator = 0
 
+    const wasVolumeBoosted = volumeBoosted
     const combined = (volumeBoosted && gain > 1) ? gain : volume
     let next = Math.max(0, Math.min(3, combined + delta))
     // If crossing 100% on the way up, snap to exactly 100% and stop
@@ -600,6 +600,7 @@
     }
 
     if (audioCtx) gainNode.gain.value = volumeBoosted ? gain : volume
+    if (volumeBoosted || wasVolumeBoosted) cache.setEntry(caches.HISTORY, 'lastBoosted', { ...(cache.getEntry(caches.HISTORY, 'lastBoosted') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: { boosted: volumeBoosted, gain } })
     showVolumeTemporarily()
   }
   function showVolumeTemporarily(updateText = true) {
