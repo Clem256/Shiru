@@ -146,16 +146,6 @@
     </div>
   </SettingCard>
 {/if}
-{#if SUPPORTS.discord}
-  <h4 class='mb-10 font-weight-bold'>Rich Presence Settings</h4>
-  <SettingCard title='Discord Rich Presence' description={'Enables the use of Discord rich presence to display app activity.\nFull enables complete rich presence support showing anime details, limited reduces what is seen not showing the currently played anime and episode, disabled completely disables rich presence.'}>
-    <select class='form-control bg-dark w-100 mw-full text-truncate' bind:value={settings.enableRPC}>
-      <option value='full' selected>Full</option>
-      <option value='limited'>Limited</option>
-      <option value='disabled'>Disabled</option>
-    </select>
-  </SettingCard>
-{/if}
 {#if SUPPORTS.angle}
   <h4 class='mb-10 font-weight-bold'>Rendering Settings</h4>
   <SettingCard title='ANGLE Backend' description="What ANGLE backend to use for rendering. DON'T CHANGE WITHOUT REASON! On some Windows machines D3D9 might help with flicker. Changing this setting to something your device doesn't support might prevent Shiru from opening which will require a full reinstall. While Vulkan is an available option it might not be fully supported on Linux.">

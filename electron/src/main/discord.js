@@ -1,8 +1,22 @@
-import { Client } from '@xhayper/discord-rpc'
-import { ipcMain } from 'electron'
+import { Client, CUSTOM_RPC_ERROR_CODE } from '@xhayper/discord-rpc'
 import { debounce } from '@/modules/util.js'
+import { ipcMain } from 'electron'
+import log from 'electron-log'
+
+/**
+ * Logs errors from Discord RPC requests, ignoring expected disconnect-related rejections.
+ *
+ * @param {Error & { code?: number }} error
+ */
+const logError = (error) => {
+  if (error?.code !== CUSTOM_RPC_ERROR_CODE.CONNECTION_ENDED && error?.code !== CUSTOM_RPC_ERROR_CODE.CONNECTION_TIMEOUT) {
+    log.error('Discord RPC request failed:', error)
+  }
+}
 
 export default class Discord {
+
+  /** @type {{ activity: object }} */
   defaultStatus = {
     activity: {
       timestamps: { start: Date.now() },
@@ -25,6 +39,7 @@ export default class Discord {
     }
   }
 
+  /** @type {Client} */
   discord = new Client({ transport: { type: 'ipc' }, clientId: '1301772260780019742' })
 
   /** @type {string} */
@@ -55,9 +70,9 @@ export default class Discord {
 
     this.discord.on('ready', async () => {
       this.setDiscordRPC(this.enableRPC === 'full' ? this.cachedPresence : undefined)
-      this.discord.subscribe('ACTIVITY_JOIN_REQUEST')
-      this.discord.subscribe('ACTIVITY_JOIN')
-      this.discord.subscribe('ACTIVITY_SPECTATE')
+      this.discord.subscribe('ACTIVITY_JOIN_REQUEST').catch(logError)
+      this.discord.subscribe('ACTIVITY_JOIN').catch(logError)
+      this.discord.subscribe('ACTIVITY_SPECTATE').catch(logError)
     })
 
     this.discord.on('disconnected', () => { if (this.enableRPC !== 'disabled') this.loginRPC() })
@@ -66,16 +81,26 @@ export default class Discord {
     this.debouncedDiscordRPC = debounce((status, clearActivity) => this.setDiscordRPC(status, clearActivity), 4_500)
   }
 
-  loginRPC () {
+  /**
+   * Attempts to log in to Discord's local RPC socket.
+   * Retries every 5 seconds on failure until a connection succeeds.
+   */
+  loginRPC() {
     this.discord.login().catch(() => setTimeout(() => this.loginRPC(), 5_000).unref?.())
   }
 
-  setDiscordRPC (data = this.defaultStatus, clearActivity = false) {
+  /**
+   * Updates or clears the Discord rich presence activity for the connected client.
+   *
+   * @param {object} [data=this.defaultStatus] the activity payload
+   * @param {boolean} [clearActivity=false]
+   */
+  setDiscordRPC(data = this.defaultStatus, clearActivity = false) {
     if (clearActivity) {
-      if (this.discord?.user) this.discord.user.clearActivity(process.pid)
+      if (this.discord?.user) this.discord.user.clearActivity(process.pid).catch(logError)
     } else if (this.discord.user && data && this.enableRPC !== 'disabled') {
       data.pid = process.pid
-      this.discord.request('SET_ACTIVITY', data)
+      this.discord.request('SET_ACTIVITY', data).catch(logError)
     }
   }
 }

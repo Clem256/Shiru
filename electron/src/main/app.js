@@ -10,11 +10,11 @@ import { BrowserWindow, MessageChannelMain, Notification, Tray, Menu, nativeImag
 import electronShutdownHandler from '@paymoapp/electron-shutdown-handler'
 
 import { development, getWindowState, saveWindowState, getDefaultBounds } from './util.js'
+import Debug from './debugger.js'
 import Discord from './discord.js'
 import Protocol from './protocol.js'
 import Updater from './updater.js'
 import Dialog from './dialog.js'
-import Debug from './debugger.js'
 
 export default class App {
   icon = nativeImage.createFromPath(join(__dirname, process.platform === 'win32' ? '/icon_filled.ico' : '/icon_filled.png'))

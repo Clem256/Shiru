@@ -64,6 +64,7 @@ export const youtubeServer = !development ? http.createServer((req, res) => {
   ></iframe>`)
   pendingResponses.set(responseId, res)
   req.on('close', () => pendingResponses.delete(responseId))
+  res.on('error', () => {})
 }) : {}
 
 youtubeServer?.listen?.(0, 'localhost', () => console.log(`YouTube server running on http://localhost:${youtubeServer.address().port}`))

@@ -9,6 +9,12 @@ log.transports.file.level = 'debug'
 log.transports.file.maxSize = 10_000_000 // 10MB
 autoUpdater.logger = log
 
+log.errorHandler.startCatching({
+  onError ({ error, processType, versions }) {
+    log.error(`[${processType}] Uncaught exception:`, error.stack, versions)
+  }
+})
+
 export default class Debug {
   constructor () {
     ipcMain.handle('common:resetLog', async () => ({ success: await log.transports.file.getFile().clear() }))

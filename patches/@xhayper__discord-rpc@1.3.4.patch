@@ -1,0 +1,30 @@
+diff --git a/dist/transport/IPC.js b/dist/transport/IPC.js
+index be4f68d17d532927b5bc42ee41714754da20a918..a4d3915aee5bebc970abc4c22ef6bfbbc3b8b305 100644
+--- a/dist/transport/IPC.js
++++ b/dist/transport/IPC.js
+@@ -147,6 +147,11 @@ class IPCTransport extends Transport_1.Transport {
+     async connect() {
+         if (!this.socket)
+             this.socket = await this.getSocket();
++        this.socket.on("error", (err) => {
++            this.client.emit("debug", `CLIENT | Socket error: ${err?.code ?? err}`);
++            this.socket = undefined;
++            this.emit("close", err?.code ?? "socket error");
++        });
+         this.emit("open");
+         this.send({
+             v: 1,
+@@ -226,7 +231,12 @@ class IPCTransport extends Transport_1.Transport {
+         const packet = Buffer.alloc(8);
+         packet.writeUInt32LE(op, 0);
+         packet.writeUInt32LE(dataBuffer.length, 4);
+-        this.socket?.write(Buffer.concat([packet, dataBuffer]));
++        if (!this.socket || this.socket.destroyed)
++            return;
++        try {
++            this.socket.write(Buffer.concat([packet, dataBuffer]));
++        }
++        catch {}
+     }
+     ping() {
+         this.send(node_crypto_1.default.randomUUID(), IPC_OPCODE.PING);

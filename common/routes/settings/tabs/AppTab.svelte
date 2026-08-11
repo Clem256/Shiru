@@ -129,6 +129,15 @@
     </select>
   </div>
 </SettingCard>
+{#if SUPPORTS.discord}
+  <SettingCard title='Discord Rich Presence' description={'Enables the use of Discord rich presence to display app activity.\nFull enables complete rich presence support showing anime details, limited reduces what is seen not showing the currently played anime and episode, disabled completely disables rich presence.'}>
+    <select class='form-control bg-dark w-100 mw-full text-truncate' bind:value={settings.enableRPC}>
+      <option value='full' selected>Full</option>
+      <option value='limited'>Limited</option>
+      <option value='disabled'>Disabled</option>
+    </select>
+  </SettingCard>
+{/if}
 {#if !SUPPORTS.isAndroid}
   <SettingCard title='Exit Action' description='Choose the functionality of the close button for the app. You can choose to receive a Prompt to Minimize or Exit, default to Minimize, or default to Exiting the app.'>
     <div>
