@@ -206,7 +206,7 @@
   </div>
 </SettingCard>
 {#if !SUPPORTS.isAndroid}
-  <SettingCard title='Pause On Lost Focus' description='Pauses/Resumes video playback when tabbing in/out of the app.'>
+  <SettingCard title='Pause On Minimize' description='Pauses/Resumes video playback when minimizing/restoring the app.'>
     <div class='custom-switch fit-content'>
       <input type='checkbox' id='player-pause' bind:checked={settings.playerPause} />
       <label for='player-pause'>{settings.playerPause ? 'On' : 'Off'}</label>
