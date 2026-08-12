@@ -25,6 +25,7 @@ export default class App {
   stateTimeout = null
 
   torrentLoad = null
+  torrentAlive = false
   webtorrentWindow = this.makeWebTorrentWindow()
 
   isMinimized = false
@@ -193,6 +194,7 @@ export default class App {
 
     ipcMain.handle('torrent:portRequest', async (event, settings) => {
       const { port1, port2 } = new MessageChannelMain()
+      this.torrentAlive = false
       await this.torrentLoad
       return new Promise(resolve => {
         ipcMain.once('webtorrent-heartbeat', () => {
@@ -200,6 +202,7 @@ export default class App {
           ipcMain.once('torrentRequest', () => {
             this.webtorrentWindow.webContents.postMessage('torrent:port', null, [port1])
             event.sender.postMessage('electron:torrentPort', null, [port2])
+            this.torrentAlive = true
             resolve()
           })
         })
@@ -331,13 +334,15 @@ export default class App {
       if (this.webtorrentWindow && !this.webtorrentWindow.isDestroyed()) { // WebTorrent shouldn't ever be destroyed before main, but it's better to be safe.
         this.webtorrentWindow.webContents?.closeDevTools?.()
         this.webtorrentWindow.webContents?.postMessage('destroy', null)
-        let resolveTimeout
-        await new Promise(resolve => {
-          ipcMain.once('destroyed', resolve)
-          resolveTimeout = setTimeout(resolve, 5_000)
-          resolveTimeout.unref?.()
-        })
-        clearTimeout(resolveTimeout)
+        if (this.torrentAlive) { // If the app hasn't fully started there may be no response from WebTorrent and no data to save, best to not wait.
+          let resolveTimeout
+          await new Promise(resolve => {
+            ipcMain.once('destroyed', resolve)
+            resolveTimeout = setTimeout(resolve, 5_000)
+            resolveTimeout.unref?.()
+          })
+          clearTimeout(resolveTimeout)
+        }
       }
     } catch {} // WebTorrent crashed... prevents hanging infinitely.
     if (!this.updater.install(forceRunAfter)) app.quit()
