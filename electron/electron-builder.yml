@@ -48,6 +48,7 @@ linux:
   synopsis: *synopsis
   description: *description
   maintainer: RockinChaos <RockinChaos@users.noreply.github.com>
+  syncDesktopName: true
   desktop:
     entry:
       Comment: *description
@@ -73,6 +74,16 @@ flatpak:
     entry:
       Keywords: anime
       MimeType: x-scheme-handler/shiru;
+  finishArgs:
+    - --socket=wayland
+    - --socket=x11
+    - --share=ipc
+    - --device=dri
+    - --socket=pulseaudio
+    - --filesystem=home
+    - --share=network
+    - --talk-name=org.freedesktop.Notifications
+    - --talk-name=org.kde.StatusNotifierWatcher
 mac:
   artifactName: ${os}-${productName}-v${version}.${ext}
   singleArchFiles: node_modules/+(register-scheme|utp-native|fs-native-extensions)/**
