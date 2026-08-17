@@ -8,9 +8,8 @@ publish:
     owner: RockinChaos
     repo: shiru
 electronDownload:
-  mirror: https://craftationgaming.com/api/packages/electron/
-  customDir: "42.3.0"
-  isVerifyChecksum: false
+  mirror: https://packages.shiru.app/electron/
+  customDir: "42.9.0"
 protocols:
   name: shiru
   schemes:
