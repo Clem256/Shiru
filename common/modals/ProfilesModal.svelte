@@ -4,7 +4,7 @@
   import { swapProfiles, alToken, malToken, profiles, sync } from '@/modules/settings.js'
   import { clientID } from '@/modules/providers/myanimelist/myanimelist.js'
   import { click } from '@/modules/lib/click.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import SoftModal from '@/components/modals/SoftModal.svelte'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import { ClockAlert, LogOut, Plus, X } from 'lucide-svelte'

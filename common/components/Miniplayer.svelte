@@ -1,5 +1,8 @@
 <script context='module'>
-  import { readable } from 'simple-store-svelte'
+  import { writable, readable } from 'simple-store-svelte'
+  import { cache, caches } from '@/modules/cache.js'
+
+  export const position = writable(cache.getEntry(caches.GENERAL, 'posMiniplayer') || 'bottom right')
 
   const mql = matchMedia('(min-width: 769px)')
   const isMobile = readable(!mql.matches, set => {
@@ -16,7 +19,7 @@
   })
 
   const lgmql = matchMedia('(min-width: 993px)')
-  const isLg = readable(lgmql.matches, set => {
+  export const isLg = readable(lgmql.matches, set => {
     const check = ({ matches }) => set(matches)
     lgmql.addEventListener('change', check)
     return () => lgmql.removeEventListener('change', check)
@@ -25,7 +28,6 @@
 
 <script>
   import { onMount, onDestroy } from 'svelte'
-  import { cache, caches } from '@/modules/cache.js'
   import { page, modal } from '@/modules/navigation.js'
   import { baseFontSize } from '@/modules/util.js'
   import { settings } from '@/modules/settings.js'
@@ -67,25 +69,24 @@
 
   $: draggingPos = ''
   $: resize = !$isMobile
-  $: position = cache.getEntry(caches.GENERAL, 'posMiniplayer') || 'bottom right'
-  $: if (!dragging) cache.setEntry(caches.GENERAL, 'posMiniplayer', position)
+  $: if (!dragging) cache.setEntry(caches.GENERAL, 'posMiniplayer', $position)
   $: minWidthRatio = $isSuperSmall ? 0.25 : 0.15
   $: playerPage = $page === page.PLAYER && (!$modal || !modal.length || !modal.exists(modal.ANIME_DETAILS))
-  $: shelveTabLeft = shelved ? shelveLeft : !!(position + draggingPos).match(/left/i)
+  $: shelveTabLeft = shelved ? shelveLeft : !!($position + draggingPos).match(/left/i)
   $: {
     if (active && !dragging && !resizing) idleShelve(playbackPaused, $settings.autoHideMiniplayer)
     else if (shelved && playerPage && (!$modal || !modal.length)) unshelve()
   }
   $: paddingTop = (() => {
     const base = (() => {
-      if (!active || (!position.match(/top/i) && !draggingPos.match(/top/i))) return padding
+      if (!active || (!$position.match(/top/i) && !draggingPos.match(/top/i))) return padding
       if ($page === page.SETTINGS && (!$modal || !modal.length)) return $isLg ? SUPPORTS.isAndroid ? padding : '4rem' : SUPPORTS.isAndroid ? '9rem' : '13rem'
       return SUPPORTS.isAndroid ? padding : '4rem'
     })()
-    return `calc(${base} + ${(!position.match(/top/i) && !draggingPos.match(/top/i)) ? '0px' : 'var(--safe-area-top)'})`
+    return `calc(${base} + ${(!$position.match(/top/i) && !draggingPos.match(/top/i)) ? '0px' : 'var(--safe-area-top)'})`
   })()
   $: paddingLeft = (() => {
-    if (!active || (!position.match(/left/i) && !draggingPos.match(/left/i))) return padding
+    if (!active || (!$position.match(/left/i) && !draggingPos.match(/left/i))) return padding
     if ($page === page.SETTINGS && (!$modal || !modal.length) && $isLg) return '32rem'
     return padding
   })()
@@ -100,7 +101,7 @@
       dragging = true
       touchShelveTime = 0
       padding = '0rem'
-      position = ''
+      $position = ''
       if (paddingLeft === '32rem') clampedLeft = remToPixels(parseFloat('30'))
       const bounds = container.getBoundingClientRect()
       const relativeBounds = container.offsetParent.getBoundingClientRect() ?? { left: 0, top: 0 }
@@ -136,8 +137,8 @@
       let currentDragId = dragId
       timeout = setTimeout(() => {
         if (currentDragId === dragId) {
-          position += istop ? ' top' : ' bottom'
-          position += isleft ? ' left' : ' right'
+          $position += istop ? ' top' : ' bottom'
+          $position += isleft ? ' left' : ' right'
           draggingPos = ''
         }
       }, 600)
@@ -177,7 +178,7 @@
 
     function handleResize({ clientX }) {
       if (clientX == null) return
-      widthRatio = startRatio + ((clientX - startX) / window.innerWidth * (position?.match(/left/i) ? 1 : -1))
+      widthRatio = startRatio + ((clientX - startX) / window.innerWidth * ($position?.match(/left/i) ? 1 : -1))
       widthRatio = Math.max(minWidthRatio, Math.min(maxWidthRatio, widthRatio))
       width = `${pixelsToRem(widthRatio * window.innerWidth)}rem`
     }
@@ -263,7 +264,7 @@
     } else if (!isPaused) unshelve()
   }
   function triggerShelve() {
-    const posStr = position + draggingPos
+    const posStr = $position + draggingPos
     shelveLeft = !!(posStr.match(/left/i))
     shelved = true
     shelvingTime = Date.now()
@@ -330,7 +331,7 @@
       if (Math.abs(dx) < 10) return
       if (Math.abs(touch.clientY - startY) > Math.abs(dx)) return
       const swipedRight = dx > 0
-      const posStr = position + draggingPos
+      const posStr = $position + draggingPos
       if (!shelved) {
         if (!playbackPaused) return
         const shelveToRight = !posStr.match(/left/i) && swipedRight
@@ -410,10 +411,10 @@
 </script>
 
 <div
-  class='miniplayer-container z-55 {position} {$$restProps.class}'
+  class='miniplayer-container z-55 {$position} {$$restProps.class}'
   class:active
   class:animate={!dragging && !shelved}
-  class:custompos={!position}
+  class:custompos={!$position}
   class:shelved
   class:shelved-left={shelved && shelveLeft}
   class:shelved-right={shelved && !shelveLeft}
@@ -457,7 +458,7 @@
       <div class='shelf-grip d-flex flex-column align-items-center justify-content-center pointer-events-none'/>
     </div>
   {/if}
-  <div class='resize resize-{position ? (position.match(/top/i) ? `b` : `t`) + (position.match(/left/i) ? `r` : `l`) : `tl`}' class:d-none={!resize || !active || shelved} use:resizable/>
+  <div class='resize resize-{$position ? ($position.match(/top/i) ? `b` : `t`) + ($position.match(/left/i) ? `r` : `l`) : `tl`}' class:d-none={!resize || !active || shelved} use:resizable/>
   <slot/>
   <div class='miniplayer-footer touch-none' class:dragging use:draggable tabindex='-1'>::::</div>
   <div class='h-full w-20 position-absolute top-0 z--1' class:mr--10={shelveTabLeft} class:ml--10={!shelveTabLeft} class:right-0={shelveTabLeft}/>

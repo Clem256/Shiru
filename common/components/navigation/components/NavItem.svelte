@@ -7,8 +7,8 @@
   import { updateState } from '@/modals/UpdateModal.svelte'
   import Helper from '@/modules/providers/helper.js'
   import { settings } from '@/modules/settings.js'
+  import { toast } from '@/modules/lib/toast.js'
   import { COMMON } from '@/modules/bridge.js'
-  import { toast } from 'svelte-sonner'
 
   /** @type {string} */
   export let item
@@ -34,7 +34,7 @@
    */
   function getClick(item) {
     if (item === 'DONATE') return () => { closeDrawer(); COMMON.openURI('https://github.com/sponsors/RockinChaos/') }
-    else if (item === 'UPDATE_DOWNLOADING') return () => { closeDrawer(); toast('Update is downloading...', { description: 'This may take a moment, the update will be ready shortly.' }) }
+    else if (item === 'UPDATE_DOWNLOADING') return () => { closeDrawer(); toast.info('Update is downloading...', { description: 'This may take a moment, the update will be ready shortly.' }) }
     else if (item === 'UPDATE_READY') {
       return () => {
         closeDrawer()

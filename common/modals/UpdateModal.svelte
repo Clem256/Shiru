@@ -11,8 +11,8 @@
   import { settings } from '@/modules/settings.js'
   import { page, modal } from '@/modules/navigation.js'
   import { createDeferred, uniqueStore } from '@/modules/util.js'
+  import { toast } from '@/modules/lib/toast.js'
   import { COMMON } from '@/modules/bridge.js'
-  import { toast } from 'svelte-sonner'
   import semver from 'semver'
 
   export const updateState = writable('up-to-date')
@@ -113,14 +113,20 @@
     if (updating) return
     updating = true
     updatePromise = createDeferred()
-    const id = toast.loading(manualInstall ? 'Opening Download' : SUPPORTS.isAndroid ? 'Downloading Update' : 'Preparing Update', { duration: Infinity, description: manualInstall ? 'Opening the download page in your browser...' : SUPPORTS.isAndroid ? 'Please wait while the latest version is downloaded...' : 'Please wait while the update is applied. The app will restart automatically...' })
+    const id = toast.loading(manualInstall ? 'Opening Download' : SUPPORTS.isAndroid ? 'Downloading Update' : 'Preparing Update', { duration: Infinity, description: manualInstall ? 'Opening the download page in your browser...' : SUPPORTS.isAndroid ? 'Please wait while the latest version is downloaded...' : 'Please wait while the update is applied. The app will restart automatically...', force: true })
     updatePromise.promise.then(() => {
       toast.success(manualInstall ? 'Download Opened' : 'Update Complete', {
-        id, duration: 6_000, description: manualInstall ? 'The download page has been opened in your browser.' : 'Update was successfully applied. The app will now restart...'
+        id,
+        force: true,
+        duration: 6_000,
+        description: manualInstall ? 'The download page has been opened in your browser.' : 'Update was successfully applied. The app will now restart...'
       })
     }).catch(() => {
       toast.error(manualInstall ? 'Download Failed' : SUPPORTS.isAndroid ? 'Update Aborted' : 'Update Failed', {
-        id, duration: 15_000, description: manualInstall ? 'Failed to open the download page.' : SUPPORTS.isAndroid ? 'Update was not installed. The process was cancelled or an error occurred.' : 'Something went wrong during the update process!'
+        id,
+        force: true,
+        duration: 15_000,
+        description: manualInstall ? 'Failed to open the download page.' : SUPPORTS.isAndroid ? 'Update was not installed. The process was cancelled or an error occurred.' : 'Something went wrong during the update process!'
       })
     })
     COMMON.quitAndInstall()

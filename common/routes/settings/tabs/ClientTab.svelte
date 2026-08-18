@@ -1,8 +1,8 @@
 <script>
   import { click } from '@/modules/lib/click.js'
   import { debounce, defaults } from '@/modules/util.js'
+  import { toast } from '@/modules/lib/toast.js'
   import { COMMON } from '@/modules/bridge.js'
-  import { toast } from 'svelte-sonner'
   import { Eraser } from 'lucide-svelte'
   import ConfirmButton from '@/components/inputs/ConfirmButton.svelte'
   import ClampedNumber from '@/components/inputs/ClampedNumber.svelte'
@@ -65,7 +65,7 @@
       <input type='text' class='form-control bg-dark mw-100 text-truncate' bind:value={settings.torrentPathNew} disabled={true} placeholder='/tmp' />
     {/if}
     <div class='input-group-prepend'>
-      <button type='button' use:click={() => { settings.torrentPathNew = undefined; if (SUPPORTS.isAndroid) toast.dismiss() }} disabled={!settings.torrentPathNew} class='btn btn-danger btn-square input-group-append px-5 d-flex align-items-center' title='Reset Location'><Eraser size='1.8rem' /></button>
+      <button type='button' use:click={() => { settings.torrentPathNew = undefined; if (SUPPORTS.isAndroid) toast.dismiss('missing-file-access') }} disabled={!settings.torrentPathNew} class='btn btn-danger btn-square input-group-append px-5 d-flex align-items-center' title='Reset Location'><Eraser size='1.8rem' /></button>
     </div>
   </div>
 </SettingCard>

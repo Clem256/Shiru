@@ -158,9 +158,6 @@
     line-height: 1.2;
     overflow: hidden
   }
-  .pre-wrap {
-    white-space: pre-wrap
-  }
   .details {
     font-size: 1.3rem;
   }

@@ -7,7 +7,7 @@
   import { COMMON, TORRENT } from '@/modules/bridge.js'
   import { loadedTorrent } from '@/modules/torrent.js'
   import { settings } from '@/modules/settings.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import Debug from 'debug'
   const debug = Debug('ui:w2g')
 

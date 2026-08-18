@@ -1,4 +1,4 @@
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
 import { writable } from 'simple-store-svelte'
 import { anilistClient } from '@/modules/providers/anilist/anilist.js'
 import { malDubs } from '@/modules/anime/animedubs.js'
@@ -306,11 +306,10 @@ class AnimeSchedule {
     getMediaForRSS(page, perPage, type) {
         const res = this._getMediaForRSS(page, perPage, type)
         res.catch(error => {
-            if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Errors')) {
-                toast.error('Search Failed', {
-                    description: `Failed to load media for home feed for ${type}!\n` + error.message
-                })
-            }
+            toast.error('Search Failed', {
+                description: `Failed to load media for home feed for ${type}!\n` + error.message,
+                respectLevel: true
+            })
             debug(`Failed to load media for home feed for ${type}`, error.stack)
         })
         return Array.from({ length: perPage }, (_, i) => ({ type: 'episode', data: this.fromPending(res, i) }))

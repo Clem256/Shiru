@@ -11,7 +11,7 @@
   import { createEventDispatcher } from 'svelte'
   import Subtitles from '@/modules/subtitles.js'
   import { toTS, fastPrettyBytes, capitalize, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import { getChaptersAniSkip } from '@/modules/anime/anime.js'
   import { mediaCache } from '@/modules/cache.js'
   import Seekbar from '@/routes/player/components/Seekbar.svelte'
@@ -138,7 +138,8 @@
     if ('audioTracks' in HTMLVideoElement.prototype) {
       if (!video.audioTracks.length) {
         toast.error('Audio Codec Unsupported', {
-          description: "This torrent's audio codec is not supported, try a different release by disabling Autoplay Torrents in RSS settings."
+          description: "This torrent's audio codec is not supported, try a different release by disabling Autoplay Torrents in RSS settings.",
+          force: true
         })
       } else if (video.audioTracks.length > 1) {
         const preferredTrack = [...video.audioTracks].find(({ language }) => language === $settings.audioLanguage)
@@ -1476,6 +1477,7 @@
         toast.error('Video Network Error', {
           description: 'A network error caused the video download to fail part-way. Dismiss this toast to reload the video.',
           duration: Infinity,
+          force: true,
           onDismiss: () => target.load()
         })
         break
@@ -1485,6 +1487,7 @@
         toast.error('Video Decode Error', {
           description: 'The video playback was aborted due to a corruption problem. Dismiss this toast to reload the video.',
           duration: Infinity,
+          force: true,
           onDismiss: () => target.load()
         })
         break
@@ -1494,7 +1497,8 @@
           saveAnimeProgress(true)
           toast.error('Video Codec Unsupported', {
             description: 'The video could not be loaded, either because the server or network failed or because the format is not supported. Try a different release by disabling Autoplay Torrents in RSS settings.',
-            duration: 30_000
+            duration: 30_000,
+            force: true
           })
         }
         break

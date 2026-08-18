@@ -2,7 +2,7 @@ import { getRandomInt, DOMPARSER, base32toHex, isValidNumber } from '@/modules/u
 import { settings } from '@/modules/settings.js'
 import { status } from '@/modules/networking.js'
 import { cache, caches } from '@/modules/cache.js'
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
 import { add } from '@/modules/torrent.js'
 import { getEpisodeMetadataForMedia, isSubbedProgress } from '@/modules/anime/anime.js'
 import AnimeResolver from '@/modules/anime/animeresolver.js'
@@ -70,9 +70,10 @@ class RSSMediaManager {
     const res = this._getMediaForRSS(page, perPage, url, ignoreChanged)
     if (!ignoreErrors) {
       res.catch(error => {
-        if ((settings.value.toasts.includes('All') || settings.value.toasts.includes('Errors')) && !status.value.match(/offline/i)) {
+        if (!status.value.match(/offline/i)) {
           toast.error('Search Failed', {
-            description: 'Failed to load media for home feed!\n' + error.message
+            description: 'Failed to load media for home feed!\n' + error.message,
+            respectLevel: true
           })
         }
         debug('Failed to load media for home feed', error.stack)

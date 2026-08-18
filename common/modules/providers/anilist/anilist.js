@@ -180,7 +180,7 @@ class AnilistClient {
     debug('Initializing Anilist Client for ID ' + this.userID?.viewer?.data?.Viewer?.id)
     this.limiter.on('failed', async (error, jobInfo) => {
       if (status.value.match(/offline/i)) throw new Error('Failed making request to Anilist, network is offline... not retrying')
-      else if (error.status === 429 || jobInfo.retryCount >= 1) await printError('Search Failed', 'Failed making request to Anilist!\nTry again in a minute.', error)
+      else if (error.status === 429 || jobInfo.retryCount >= 1) await printError('Search Failed', 'Failed making request to Anilist! Trying again in a minute.', error, 60_000)
       const errorDebug = `Error: ${error.status || 429} - ${error.message || error.statusText || codes[error.status || 429]}`
 
       if (error.status === 429) { // rate limited...
@@ -257,7 +257,7 @@ class AnilistClient {
     try {
       json = await res.json()
     } catch (error) {
-      if (res.ok) printError('Search Failed', 'Failed making request to Anilist!\nTry again in a minute.', error)
+      if (res.ok) printError('Search Failed', 'Failed making request to Anilist! Try again in a minute.', error)
     }
     if (!res.ok && res.status !== 404) {
       if (json) {
@@ -265,10 +265,10 @@ class AnilistClient {
           if (error.status === 400 && error.message?.match(/invalid token/i) && opts.headers.Authorization && !validateToken(opts.headers.Authorization, true)) {
             return { data: null, errors: [{ message: 'AniList session has expired. Please go to Profiles and log in again to continue syncing.', status: 401 }] }
           }
-          printError('Search Failed', 'Failed making request to Anilist!\nTry again in a minute.', error)
+          printError('Search Failed', 'Failed making request to Anilist! Try again in a minute.', error)
         }
       } else {
-        printError('Search Failed', 'Failed making request to Anilist!\nTry again in a minute.', res)
+        printError('Search Failed', 'Failed making request to Anilist! Try again in a minute.', res)
       }
     }
     return json || res

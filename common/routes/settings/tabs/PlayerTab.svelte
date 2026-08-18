@@ -6,8 +6,8 @@
   import { click } from '@/modules/lib/click.js'
   import { COMMON } from '@/modules/bridge.js'
   import { writable } from 'simple-store-svelte'
+  import { toast } from '@/modules/lib/toast.js'
   import { Eraser } from 'lucide-svelte'
-  import { toast } from 'svelte-sonner'
   import { onMount } from 'svelte'
   import Debug from 'debug'
   const debug = Debug('ui:playerTab')

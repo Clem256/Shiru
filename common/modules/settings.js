@@ -1,8 +1,8 @@
 import { cache, caches } from '@/modules/cache.js'
 import { persisted } from 'svelte-persisted-store'
 import { writable } from 'simple-store-svelte'
+import { toast } from '@/modules/lib/toast.js'
 import { defaults } from '@/modules/util.js'
-import { toast } from 'svelte-sonner'
 import { COMMON, TORRENT, ANDROID } from '@/modules/bridge.js'
 import Debug from 'debug'
 const debug = Debug('ui:settings')

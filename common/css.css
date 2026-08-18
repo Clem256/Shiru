@@ -315,6 +315,9 @@
 .wm-350 {
   max-width: 35rem;
 }
+.wm-420 {
+  max-width: 42rem;
+}
 .wm-600 {
   max-width: 60rem;
 }
@@ -413,7 +416,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-a[href]:active, button:not([disabled], .not-reactive):active:not([data-sonner-toast] > button), fieldset:not([disabled]):active, input:not([disabled], [type='range'], .not-reactive):active, optgroup:not([disabled]):active, option:not([disabled]):active, select:not([disabled]):active, textarea:not([disabled]):active, details:active, [tabindex]:not([disabled], [tabindex="-1"], [aria-hidden="true"], .seekbar, .dropdown, .scoring, .not-reactive):active, [contenteditable]:active, [controls]:active {
+a[href]:active, button:not([disabled], .not-reactive):active, fieldset:not([disabled]):active, input:not([disabled], [type='range'], .not-reactive):active, optgroup:not([disabled]):active, option:not([disabled]):active, select:not([disabled]):active, textarea:not([disabled]):active, details:active, [tabindex]:not([disabled], [tabindex="-1"], [aria-hidden="true"], .seekbar, .dropdown, .scoring, .not-reactive):active, [contenteditable]:active, [controls]:active {
   transition: box-shadow 0.1s ease, filter 0.1s ease !important;
   filter: brightness(0.95) contrast(1.05) !important;
   box-shadow: 0 0 2rem hsla(var(--black-color-hsl), 0.1), 0 .4rem .6rem hsla(var(--black-color-hsl), 0.05) !important;
@@ -424,46 +427,6 @@ a[href]:active, button:not([disabled], .not-reactive):active:not([data-sonner-to
   --dm-button-secondary-bg-color: var(--white-color) !important;
   --dm-button-secondary-bg-color-hover: var(--white-color-dim) !important;
   --dm-button-secondary-bg-color-focus: var(--dm-button-secondary-bg-color) !important;
-}
-
-[data-sonner-toaster][data-theme='dark'] {
-  top: 5rem !important;
-  --normal-bg: var(--dark-color) !important;
-  --normal-border: none !important;
-  --normal-text: var(--dm-base-text-color) !important;
-
-  /* --success-bg: var(--success-color) !important; */
-  --success-border: none !important;
-  /* --success-text: var(--lm-base-text-color) !important; */
-
-  /* --error-bg: hsl(358, 76%, 10%); */
-  --error-border: none !important;
-  /* --error-text: hsl(358, 100%, 81%); */
-}
-
-[data-sonner-toast] > button {
-  position: absolute !important;
-  margin-left: 94% !important;
-  right: 0 !important;
-  margin-top: 1.4rem !important;
-  border-radius: .4rem !important;
-  border-color: transparent !important;
-  background-color: transparent !important;
-  color: hsla(var(--white-color-hsl), 0.93) !important;
-}
-
-[data-sonner-toast] > button svg {
-  width: 2rem !important;
-  height: 2rem !important;
-  stroke-width: 2.5 !important;
-}
-
-[data-sonner-toast] > div:nth-child(2) > div:first-child {
-  line-height: 1.1 !important;
-}
-
-[data-sonner-toaster] [data-description] {
-  white-space: pre-wrap;
 }
 
 .first-audio {

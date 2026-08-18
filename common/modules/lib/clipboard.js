@@ -1,9 +1,9 @@
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
 
 export function copyToClipboard(text, detail) {
   if (!text) return
   navigator.clipboard.writeText(text)
-  toast('Copied to clipboard', {
+  toast.info('Copied to clipboard', {
     description: `Copied${detail ? ` ${detail}` : ''} to clipboard`,
     duration: 5_000
   })

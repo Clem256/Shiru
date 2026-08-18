@@ -3,7 +3,7 @@
   import { cache, caches } from '@/modules/cache.js'
   import { SUPPORTS } from '@/modules/support.js'
   import { COMMON, ELECTRON, TORRENT } from '@/modules/bridge.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
 
   async function importSettings() {
     try {
@@ -117,7 +117,7 @@
 <SettingCard title='About This App' description='Not sure what a setting does? Leave it as default. Some settings require the app to be restarted to take effect.' class='d-lg-none'>
   <div class='d-flex flex-column'>
     <span class='text-nowrap'>{version ? `v${version} ${semver.prerelease(version) ? `(Nightly)` : ``}` : ``} {platformMap[COMMON.getPlatformInfo().platform] || 'dev'} {COMMON.getPlatformInfo().arch || 'dev'} {capitalize(COMMON.getPlatformInfo().session) || ''}</span>
-    <button type='button' use:click={() => { toast('Update is downloading...', { description: 'This may take a moment, the update will be ready shortly.' }) }} class='btn btn-primary mt-5 d-none align-items-center justify-content-center' style='background-color: var(--tertiary-color-light);' class:d-flex={$updateState === 'downloading'}><span class='text-truncate'>Update Downloading...</span></button>
+    <button type='button' use:click={() => { toast.info('Update is downloading...', { description: 'This may take a moment, the update will be ready shortly.' }) }} class='btn btn-primary mt-5 d-none align-items-center justify-content-center' style='background-color: var(--tertiary-color-light);' class:d-flex={$updateState === 'downloading'}><span class='text-truncate'>Update Downloading...</span></button>
     <button type='button' use:click={() => { if ($updateState !== 'ready') updateState.set('ready'); else modal.open(modal.UPDATE_PROMPT) }} class='btn btn-primary mt-5 d-none align-items-center justify-content-center bg-success-light' class:d-flex={$updateState === 'ready' || $updateState === 'ignored' || $updateState === 'aborted'}><span class='text-truncate'>Update Available!</span></button>
   </div>
 </SettingCard>

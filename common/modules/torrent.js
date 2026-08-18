@@ -5,7 +5,7 @@ import { cache, caches } from '@/modules/cache.js'
 import { SUPPORTS } from '@/modules/support.js'
 import { status } from '@/modules/networking.js'
 import { writable } from 'simple-store-svelte'
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
 import { capitalize } from '@/modules/util.js'
 import clipboard from '@/modules/lib/clipboard.js'
 import { setHash } from '@/modules/anime/animehash.js'
@@ -58,10 +58,11 @@ TORRENT.portRequest(_settings).then(() => {
   window.addEventListener('add', (event) => add(event.detail.resolvedHash, event.detail.search, event.detail.resolvedHash)) // TODO: Circular Dependency (MediaHandler.svelte)
   TORRENT.onCrash(() => {
     console.error('Ooops! WebTorrent Crashed! A crash has been detected... The process has automatically been restarted.')
-    toast.dismiss()
     toast.error('Ooops! WebTorrent Crashed!', {
       description: 'A crash has been detected... The process has automatically been restarted.',
-      duration: 15000
+      duration: 15000,
+      force: true,
+      dedupe: true
     })
     setupTorrentClient()
   })
@@ -226,12 +227,12 @@ function setupTorrentClient() {
 
 function notify(type, detail) {
   debug(`${capitalize(type)}:`, detail.message || JSON.stringify(detail))
-  if (type === 'info' || settings.value.toasts.includes('All') || settings.value.toasts.includes('Warnings')) {
+  if (type === 'info') {
     for (const exclude of excludedToastMessages) {
       if ((detail.message || detail)?.toLowerCase()?.includes(exclude)) return
     }
-    if (type === 'warn') toast.warning(`Torrent Warning`, { description: '' + (detail.message || detail) })
-    else if (type === 'error') toast.error(`Torrent Error`, { description: '' + (detail.message || detail) })
-    else toast(`Torrent ${capitalize(type)}`, { description: '' + (detail.message || detail) })
+    if (type === 'warn') toast.warning(`Torrent Warning`, { description: '' + (detail.message || detail), respectLevel: true })
+    else if (type === 'error') toast.error(`Torrent Error`, { description: '' + (detail.message || detail), respectLevel: true })
+    else toast.info(`Torrent ${capitalize(type)}`, { description: '' + (detail.message || detail) })
   }
 }

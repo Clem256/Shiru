@@ -1,6 +1,6 @@
+import { toast } from '@/modules/lib/toast.js'
 import { FileManager } from './plugin.js'
 import { ipcWire } from './ipc.js'
-import { toast } from 'svelte-sonner'
 
 export default class Dialog {
   STORAGE_TYPE_MAP = { primary: '/sdcard/', secondary: '/sdcard/'}

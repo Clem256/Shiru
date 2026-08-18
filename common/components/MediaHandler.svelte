@@ -4,7 +4,7 @@
   import { setHash, getHash, getId } from '@/modules/anime/animehash.js'
   import { videoRx, matchPhrase, isValidNumber } from '@/modules/util.js'
   import { tick } from 'svelte'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
   import { files as _files } from '@/modules/navigation.js'
   import { mediaCache } from '@/modules/cache.js'
@@ -66,6 +66,7 @@
       handleFiles(fileList, targetFile).catch(e => {
             toast.error('File Error', {
                 description: e?.message || String(e),
+                force: true,
                 duration: 30000
             })
           debug(e)
@@ -501,6 +502,7 @@
       handleFiles(files).catch(e => {
           toast.error('File Error', {
               description: e?.message || String(e),
+              force: true,
               duration: 30000
           })
         debug(e)

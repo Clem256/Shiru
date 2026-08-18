@@ -8,7 +8,7 @@ import { getMediaMaxEp, hasZeroEpisode } from '@/modules/anime/anime.js'
 import { resetAnimeProgress } from '@/modules/anime/animeprogress.js'
 import { readNotification } from '@/modules/notification/manager.js'
 import { codes, matchKeys, isValidNumber } from '@/modules/util.js'
-import { toast } from 'svelte-sonner'
+import { toast } from '@/modules/lib/toast.js'
 import Debug from 'debug'
 const debug = Debug('ui:helper')
 
@@ -249,21 +249,21 @@ export default class Helper {
     const who = (profile ? ' for ' + profile.viewer.data.Viewer.name + (profile.viewer?.data?.Viewer?.avatar ? ' (AniList)' : ' (MyAnimeList)')  : '')
     if (res?.data?.mediaListEntry || res?.data?.SaveMediaListEntry) {
       debug(`List Updated ${who}: ${description.replace(/\n/g, ', ')}`)
-      if (!profile && (settings.value.toasts.includes('All') || settings.value.toasts.includes('Successes'))) {
+      if (!profile) {
         toast.success('List Updated', {
           description,
+          respectLevel: true,
           duration: 6000
         })
       }
     } else {
       const error = `\n${429} - ${codes[429]}`
       debug(`Error: Failed to update user list${who} with: ${description.replace(/\n/g, ', ')} ${error}`)
-      if (settings.value.toasts.includes('All') || settings.value.toasts.includes('Errors')) {
-        toast.error('Failed to Update List' + who, {
-          description: description + error,
-          duration: 9000
-        })
-      }
+      toast.error('Failed to Update List' + who, {
+        description: description + error,
+        respectLevel: true,
+        duration: 9000
+      })
     }
   }
 

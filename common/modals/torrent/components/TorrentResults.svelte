@@ -14,7 +14,7 @@
   import AnimeResolver from '@/modules/anime/animeresolver.js'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
   import { click } from '@/modules/lib/click.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import NestedDropdown from '@/components/overlays/NestedDropdown.svelte'
   import { X, Search, EllipsisVertical, Timer, Clapperboard, MonitorCog, ArrowDownWideNarrow, Paintbrush, ListMusic, ChevronUp, ChevronDown, Radio, RefreshCw } from 'lucide-svelte'
   import Debug from 'debug'

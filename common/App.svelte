@@ -19,7 +19,7 @@
   import MinimizeModal from '@/modals/MinimizeModal.svelte'
   import Status from '@/components/Status.svelte'
   import { status } from '@/modules/networking.js'
-  import { Toaster } from 'svelte-sonner'
+  import Toaster from '@/components/toast/Toaster.svelte'
   import { onMount, onDestroy } from 'svelte'
 
   let currentStatus = status.value
@@ -60,7 +60,7 @@
   <Sidebar />
   <Bottombar />
   <div class='overflow-hidden content-wrapper h-full' class:status-transition={$statusTransition}>
-    <Toaster visibleToasts={2} position='top-right' theme='dark' richColors duration={10_000} closeButton toastOptions={{class: `${$page === page.SETTINGS ? 'mt-70 mt-lg-0' : ''} ${isFullscreen && (!$modal || !modal.length) ? 'd-none' : ''}`}} />
+    <Toaster position='top-right' max={5} hidden={isFullscreen && (!$modal || !modal.length)} />
     <DetailsModal />
     <TorrentModal />
     <NotificationModal />

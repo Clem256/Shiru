@@ -16,7 +16,7 @@
   import { settings } from '@/modules/settings.js'
   import { SUPPORTS } from '@/modules/support.js'
   import { click } from '@/modules/lib/click.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import Helper from '@/modules/providers/helper.js'
   import CustomDropdown from '@/components/CustomDropdown.svelte'
   import { BookUser, Type, Leaf, CalendarRange, MonitorPlay, MonitorUp, MonitorX, Tv, ArrowDownWideNarrow, Filter, FilterX, X, Tags, Hash, SlidersHorizontal, EyeOff, Hourglass, Mic, ImageUp, Search, Grid3X3, Grid2X2 } from 'lucide-svelte'

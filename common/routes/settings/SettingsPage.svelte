@@ -2,7 +2,7 @@
   import { settings, debugStore } from '@/modules/settings.js'
   import { SUPPORTS } from '@/modules/support.js'
   import { capitalize, debounce } from '@/modules/util.js'
-  import { toast } from 'svelte-sonner'
+  import { toast } from '@/modules/lib/toast.js'
   import { ANDROID, COMMON, ELECTRON } from '@/modules/bridge.js'
   import Debug from 'debug'
   const debug = Debug('ui:settings-view')
@@ -38,6 +38,7 @@
       }
       const toastAccess = (error) => {
         toast.warning('Missing File Access', {
+          id: 'missing-file-access',
           description: error,
           duration: Infinity,
           onDismiss: () => requestAccess()
@@ -209,6 +210,9 @@
     background: linear-gradient(to bottom, var(--dark-color), transparent);
     pointer-events: none;
   }
+  .bb-10 {
+    border-bottom: .10rem var(--border-color-sp) solid;
+  }
   @media (min-width: 993px) {
     .bb-10 {
       border-bottom: none !important;
@@ -218,8 +222,5 @@
     .br-10 {
       border-right: none !important;
     }
-  }
-  .bb-10 {
-    border-bottom: .10rem var(--border-color-sp) solid;
   }
 </style>

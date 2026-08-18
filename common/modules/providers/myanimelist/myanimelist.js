@@ -61,7 +61,7 @@ class MALClient {
   constructor () {
     debug('Initializing MyAnimeList Client for ID ' + this.userID?.viewer?.data?.Viewer?.id)
     this.limiter.on('failed', async (error, jobInfo) => {
-      printError('Search Failed', 'Failed making request to MyAnimeList!\nTry again in a minute.\n', error)
+      printError('Search Failed', 'Failed making request to MyAnimeList! Try again in a minute.', error)
 
       if (error.status === 500) return 1
 
@@ -155,7 +155,7 @@ class MALClient {
     try {
       json = await res.json()
     } catch (error) {
-      if (res?.ok) printError('Search Failed', 'Failed making request to MyAnimeList!\nTry again in a minute.\n', error)
+      if (res?.ok) printError('Search Failed', 'Failed making request to MyAnimeList! Try again in a minute.', error)
     }
     if (!res?.ok && res?.status !== 404) {
       if (json) {
@@ -181,10 +181,10 @@ class MALClient {
             default:
               code = res?.status
           }
-          printError('Search Failed', 'Failed making request to MyAnimeList!\nTry again in a minute.\n', code)
+          printError('Search Failed', 'Failed making request to MyAnimeList! Try again in a minute.', code)
         }
       } else {
-        printError('Search Failed', 'Failed making request to MyAnimeList!\nTry again in a minute.\n', res)
+        printError('Search Failed', 'Failed making request to MyAnimeList! Try again in a minute.', res)
       }
     }
     return json
