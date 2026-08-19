@@ -1,20 +1,20 @@
 <p align="center">
-	<a href="https://github.com/RockinChaos/Shiru">
+	<a href="https://shiru.app/">
 		<img src=".github/docs/assets/logo_filled.svg" width="400" alt="Shiru">
 	</a>
 </p>
 <h4 align="center"><b>A personal anime library manager for watching and tracking your collection in real time. Lightweight, powerful, and paws-itively fast. No waiting required!</b></h4>
 
 <p align="center">
-  <a href="https://github.com/RockinChaos/Shiru/wiki/">📚 Wiki</a> •
-  <a href="https://github.com/RockinChaos/Shiru/wiki/features/">✨ Features</a> •
-  <a href="https://github.com/RockinChaos/Shiru/wiki/faq/">❓ FAQ</a> •
+  <a href="https://shiru.app/">🏠 Home</a> •
+  <a href="https://shiru.app/#/features/">✨ Features</a> •
+  <a href="https://shiru.app/#/faq/">❓ FAQ</a> •
   <a href="#-building--development">🔧 Building & Development</a> •
-  <a href="https://github.com/RockinChaos/Shiru/releases/latest/">⬇️ Download</a>
+  <a href="https://shiru.app/#/download/">⬇️ Download</a>
 </p>
 <p align="center">
-  <a href="https://github.com/RockinChaos/Shiru/releases/latest/"><img alt="Downloads" src="https://img.shields.io/github/downloads/RockinChaos/Shiru/total?style=flat-square"></a>
-  <a href="https://github.com/RockinChaos/Shiru/releases/latest/"><img alt="Latest Release" src="https://img.shields.io/github/v/release/RockinChaos/Shiru?style=flat-square"></a>
+  <a href="https://shiru.app/#/download/"><img alt="Downloads" src="https://img.shields.io/github/downloads/RockinChaos/Shiru/total?style=flat-square"></a>
+  <a href="https://shiru.app/#/download/"><img alt="Latest Release" src="https://img.shields.io/github/v/release/RockinChaos/Shiru?style=flat-square"></a>
   <a href="https://github.com/RockinChaos/Shiru/commits"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/RockinChaos/Shiru?style=flat-square"></a>
   <a href="https://github.com/RockinChaos/Shiru/stargazers"><img alt="Stargazers" src="https://img.shields.io/github/stars/RockinChaos/Shiru?style=flat-square"></a>
   <a href="LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/github/license/RockinChaos/Shiru?style=flat-square"></a>
@@ -78,7 +78,7 @@ Out of the box, Shiru plays files you already have locally. Extensions unlock ad
 - Support for custom RSS feeds and resolution preferences
 - Adjustable network speeds
 - Dynamic extension loading, with results appearing as each extension completes rather than waiting for all to finish
-- Design and use custom [extensions](https://github.com/RockinChaos/Shiru/wiki/Extensions) to connect your own content sources
+- Design and use custom [extensions](https://shiru.app/#/extensions/) to connect your own content sources
 
 ### 🔔 Notifications
 - Real-time alerts for new sub, dub, and hentai episodes
@@ -153,7 +153,7 @@ yay -S shiru
 ```
 
 #### Debian/Ubuntu:
-1. 🔗 Download the `linux-Shiru-version.deb` from the [releases page](https://github.com/RockinChaos/Shiru/releases/latest).
+1. 🔗 Download the `linux-Shiru-version.deb` from the [releases page](https://latest.shiru.app/).
 2. 📦 Install using the package manager:
 
     ```bash
@@ -170,7 +170,7 @@ winget install shiru
 ```
 
 #### Option 2: 🔄 Installer or Portable Version
-1. 🔗 Download from the [releases page](https://github.com/RockinChaos/Shiru/releases/latest):
+1. 🔗 Download from the [releases page](https://latest.shiru.app/):
    - **Installer:** `win-Shiru-vx.x.x-installer.exe`
    - **Portable:** `win-Shiru-vx.x.x-portable.exe` *(No installation required, just run it)*
 
@@ -240,7 +240,7 @@ Credit to [NoCrypt](https://github.com/NoCrypt) for doing the legwork on this.
    ```bash
    pnpm dev:start
    ```
-8. Build the app for release (APK will not be [signed](https://github.com/NoCrypt/sign-android)):
+8. Build the app for release (APK will not be [signed](https://github.com/RockinChaos/sign-android/)):
    ```bash
    pnpm build:app
    ```

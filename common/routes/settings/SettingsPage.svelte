@@ -98,7 +98,7 @@
     donate: {
       name: 'Donate',
       icon: Heart,
-      action: () => COMMON.openURI('https://github.com/sponsors/RockinChaos/'),
+      action: () => COMMON.openURI('https://contribute.shiru.app/'),
       sidebar: true
     }
   }

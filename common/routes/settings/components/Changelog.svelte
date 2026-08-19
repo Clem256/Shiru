@@ -56,7 +56,7 @@
    */
   export async function getReleaseByTag(version) {
     try {
-      const response = await fetch(`https://api.github.com/repos/RockinChaos/Shiru/releases/tags/v${semver.valid(version)?.replace(/^v/, '') ?? version}`)
+      const response = await fetch(`${atob('aHR0cHM6Ly91cGRhdGVzLnNoaXJ1LmFwcA==')}/tags/v${semver.valid(version)?.replace(/^v/, '') ?? version}`)
       if (!response.ok) return null
       const [entry] = mapLogs([await response.json()])
       return entry
@@ -74,7 +74,7 @@
    */
   async function getChanges() {
     try {
-      const res = await fetch('https://api.github.com/repos/RockinChaos/Shiru/releases')
+      const res = await fetch(atob('aHR0cHM6Ly91cGRhdGVzLnNoaXJ1LmFwcA=='))
       if (res.status === 404 || res.status === 451) {
         debug('Repository is gone or access has been blocked, unable to fetch changes.')
         return []

@@ -1582,7 +1582,7 @@
           },
           {
             label: 'Download Shiru',
-            url: 'https://github.com/RockinChaos/Shiru/releases/latest'
+            url: 'https://latest.shiru.app/'
           }
         ]
       }
@@ -1593,14 +1593,14 @@
         state: 'Exploring the anime library...',
         assets: {
           large_image: 'icon',
-          large_text: 'https://github.com/RockinChaos/Shiru',
+          large_text: 'https://shiru.app/',
           small_image: 'searching',
           small_text: 'Browsing anime on Shiru',
         },
         buttons: [
           {
             label: 'Download Shiru',
-            url: 'https://github.com/RockinChaos/Shiru/releases/latest'
+            url: 'https://latest.shiru.app/'
           }
         ],
         instance: true,

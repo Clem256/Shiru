@@ -15,9 +15,9 @@ export default class Protocol {
     search: id => this.play(id),
     w2g: link => ipcWire.send('common:onLobbyInvite', link),
     schedule: () => ipcWire.send('common:onRequestPage', 'schedule'),
-    donate: () => Browser.open({ url: 'https://github.com/sponsors/RockinChaos/' }),
+    donate: () => Browser.open({ url: 'https://contribute.shiru.app/' }),
     update: () => ipcWire.emit('common:quitAndInstall'),
-    changelog: () => Browser.open({ url: 'https://github.com/RockinChaos/Shiru/releases/latest' })
+    changelog: () => Browser.open({ url: 'https://latest.shiru.app/' })
   }
 
   protocolRx = /shiru:\/\/([a-z0-9]+)\/(.*)/i

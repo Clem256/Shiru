@@ -181,7 +181,7 @@
           <div>
             <strong class='d-block mb-5'>Nightly Build</strong>
             <div>This pre-release version may contain experimental features and bugs, use at your own risk. {!semver.prerelease(version) ? 'You are currently on a stable release, once updated you will not be able to downgrade.' : ''}</div>
-            <div class='mt-10' class:d-none={!isLesser}>It looks like you're upgrading from an earlier version, consider checking out the <span class='custom-link' use:click={() => COMMON.openURI('https://github.com/RockinChaos/Shiru/releases')}>previous release notes</span></div>
+            <div class='mt-10' class:d-none={!isLesser}>It looks like you're upgrading from an earlier version, consider checking out the <span class='custom-link' use:click={() => COMMON.openURI(atob('aHR0cHM6Ly9yZWxlYXNlcy5zaGlydS5hcHAv'))}>previous release notes</span></div>
           </div>
         </div>
       {/if}
@@ -189,7 +189,7 @@
         <Info class='mr-10 flex-shrink-0' size='2rem' />
         <div class='upgrade-notice'>
           <strong class='d-block mb-5'>Upgrade Notice</strong>
-          <span>It looks like you're upgrading from an earlier version, consider checking out the <span class='custom-link' use:click={() => COMMON.openURI('https://github.com/RockinChaos/Shiru/releases')}>previous release notes</span>.</span>
+          <span>It looks like you're upgrading from an earlier version, consider checking out the <span class='custom-link' use:click={() => COMMON.openURI(atob('aHR0cHM6Ly9yZWxlYXNlcy5zaGlydS5hcHAv'))}>previous release notes</span>.</span>
         </div>
       </div>
       {#if manualInstall}
@@ -206,7 +206,7 @@
         </div>
       {/if}
       <hr class='my-20' class:d-none={!isNightlyVersion && !isLesser && !manualInstall}/>
-      <span>Consider <span class='custom-link' use:click={() => COMMON.openURI('https://github.com/sponsors/RockinChaos')}>donating on GitHub</span> to help support future Shiru development.</span>
+      <span>Consider <span class='custom-link' use:click={() => COMMON.openURI('https://contribute.shiru.app/')}>donating on GitHub</span> to help support future Shiru development.</span>
       <hr class='my-20'/>
       {#if changelog?.entry?.body?.trim().length}
         <div class='whats-new'>

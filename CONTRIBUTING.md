@@ -23,7 +23,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 Found a bug? Help us fix it by creating a detailed bug report:
 
-1. **Check existing issues** - Search the [issue tracker](https://github.com/RockinChaos/Shiru/issues?q=is%3Aissue%20label%3Abug) to see if the bug has already been reported
+1. **Check existing issues** - Search the [issue tracker](https://issues.shiru.app?q=is%3Aissue%20label%3Abug) to see if the bug has already been reported
 2. **Use the bug report template** - Click "New Issue" and select "Bug Report"
 3. **Provide details** - Include:
     - Your operating system and architecture
@@ -36,7 +36,7 @@ Found a bug? Help us fix it by creating a detailed bug report:
 
 Have an idea to improve Shiru? We'd love to hear it:
 
-1. **Check existing requests** - Search the [issue tracker](https://github.com/RockinChaos/Shiru/issues?q=is%3Aissue%20label%3Aenhancement) to avoid duplicates
+1. **Check existing requests** - Search the [issue tracker](https://issues.shiru.app?q=is%3Aissue%20label%3Aenhancement) to avoid duplicates
 2. **Use the feature request template** - Click "New Issue" and select "Feature Request"
 3. **Be specific** - Clearly describe:
     - What problem does the feature solve
@@ -48,7 +48,7 @@ Have an idea to improve Shiru? We'd love to hear it:
 
 Need help or clarification? We're here to assist:
 
-1. **Check the FAQ** - Visit our [frequently asked questions](https://github.com/RockinChaos/Shiru/wiki/faq)
+1. **Check the FAQ** - Visit our [frequently asked questions](https://shiru.app/#/faq/)
 2. **Use the assistance request template** - Click "New Issue" and select "Assistance Request"
 3. **Be clear** - Describe what you're trying to do and what you've already tried
 
@@ -152,7 +152,7 @@ pnpm exec cap open android
 pnpm dev:start
 ```
 
-9. Build the app for release (APK will not be [signed](https://github.com/NoCrypt/sign-android)):
+9. Build the app for release (APK will not be [signed](https://github.com/RockinChaos/sign-android/)):
 ```bash
 pnpm build:app
 ```
@@ -162,7 +162,7 @@ pnpm build:app
 **Android:**
 - Ensure ADB is properly configured and your device is connected (you can also use emulation)
 - SDK 34 is required
-- Release builds require signing (see [NoCrypt's signing guide](https://github.com/NoCrypt/sign-android))
+- Release builds require signing (see [signing guide](https://github.com/RockinChaos/sign-android#readme))
 
 **Windows:**
 - Docker requires WSL to be installed and configured
@@ -213,7 +213,7 @@ pnpm build:app
 ### 💬 Getting Help
 
 - **Issues** - For bugs, features, and questions
-- **Wiki** - Check the [project wiki](https://github.com/RockinChaos/Shiru/wiki) for documentation
+- **Faq** - Check the [faq](https://shiru.app/#/faq/) for documentation
 
 ### 🏆 Recognition
 

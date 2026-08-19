@@ -24,9 +24,9 @@ export default class Protocol {
     search: id => this.play(id),
     w2g: link => this.window.webContents.send('common:onLobbyInvite', link),
     schedule: () => this.window.webContents.send('common:onRequestPage', 'schedule'),
-    donate: () => shell.openExternal('https://github.com/sponsors/RockinChaos/'),
+    donate: () => shell.openExternal('https://contribute.shiru.app/'),
     update: () => ipcMain.emit('common:quitAndInstall'),
-    changelog: () => shell.openExternal('https://github.com/RockinChaos/Shiru/releases/latest'),
+    changelog: () => shell.openExternal('https://latest.shiru.app/'),
     show: () => ipcMain.emit('electron:showAndFocus')
   }
 
