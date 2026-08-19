@@ -303,8 +303,8 @@ class AnimeSchedule {
         return null
     }
 
-    getMediaForRSS(page, perPage, type) {
-        const res = this._getMediaForRSS(page, perPage, type)
+    getMediaForRSS(page, perPage, type, background = false) {
+        const res = this._getMediaForRSS(page, perPage, type, background)
         res.catch(error => {
             toast.error('Search Failed', {
                 description: `Failed to load media for home feed for ${type}!\n` + error.message,
@@ -315,7 +315,7 @@ class AnimeSchedule {
         return Array.from({ length: perPage }, (_, i) => ({ type: 'episode', data: this.fromPending(res, i) }))
     }
 
-    async _getMediaForRSS(page, perPage, type) {
+    async _getMediaForRSS(page, perPage, type, background = false) {
         debug(`Getting media for schedule feed (${type}) page ${page} perPage ${perPage}`)
         const currentTime = Math.floor(Date.now() / 1000)
         let res = (await this[`${type.toLowerCase()}AiredLists`].value) || []
@@ -327,7 +327,7 @@ class AnimeSchedule {
         const paginatedLists = res.slice((page - 1) * perPage, page * perPage) || []
         const ids = paginatedLists.map(({ id }) => id).filter(Boolean)
 
-        hasNextPage.value = ids?.length === perPage
+        if (!background) hasNextPage.value = ids?.length === perPage
         if (!ids.length) return {}
 
         if (cachedAiredLists && JSON.stringify(cachedAiredLists.airedLists) === JSON.stringify(res)) return cachedAiredLists.results

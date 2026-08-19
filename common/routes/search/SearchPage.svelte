@@ -98,11 +98,14 @@
     $items = []
     canScroll = false
     hasNextPage.value = true
-    await loadSearchData()
-    while ($hasNextPage && container && cachedKey === $key && container.scrollTop + container.clientHeight > container.scrollHeight - scrollThreshold) {
+    try {
       await loadSearchData()
+      while ($hasNextPage && container && cachedKey === $key && container.scrollTop + container.clientHeight > container.scrollHeight - scrollThreshold) {
+        await loadSearchData()
+      }
+    } finally {
+      canScroll = true
     }
-    canScroll = true
   }
   /** Debounced fillViewport, collapses duplicate calls from the reactive statement and onMount */
   const loadTillFull = debounce(fillViewport)
@@ -116,11 +119,14 @@
     const scrollContainer = _container?.currentTarget || _container
     if (scrollContainer && canScroll && $hasNextPage && scrollContainer.scrollTop + scrollContainer.clientHeight > scrollContainer.scrollHeight - scrollThreshold) {
       canScroll = false
-      await loadSearchData()
-      while ($hasNextPage && scrollContainer && cachedKey === $key && scrollContainer.scrollTop + scrollContainer.clientHeight > scrollContainer.scrollHeight - scrollThreshold) {
+      try {
         await loadSearchData()
+        while ($hasNextPage && scrollContainer && cachedKey === $key && scrollContainer.scrollTop + scrollContainer.clientHeight > scrollContainer.scrollHeight - scrollThreshold) {
+          await loadSearchData()
+        }
+      } finally {
+        canScroll = true
       }
-      canScroll = true
     }
   }
 

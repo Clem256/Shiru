@@ -50,7 +50,7 @@ export default class SectionsManager {
   }
 
   static createFallbackLoad (variables, type) {
-    return (page = 1, perPage = 50, search = variables) => {
+    return (page = 1, perPage = 50, search = variables, background = false) => {
       const res = (search.hideSubs ? malDubs.dubLists.value : Promise.resolve()).then(dubLists => {
         const hideSubs = search.hideSubs ? { idMal: dubLists?.dubbed } : {}
         if ((search.hideMyAnime || search.showMyAnime) && Helper.isAuthorized()) {
@@ -69,14 +69,12 @@ export default class SectionsManager {
         }
         return anilistClient.search({ page, perPage, ...hideSubs, ...SectionsManager.sanitiseObject(search) })
       })
-      return SectionsManager.wrapResponse(res, perPage, type)
+      return SectionsManager.wrapResponse(res, perPage, type, background)
     }
   }
 
-  static wrapResponse (res, length, type) {
-    res.then(res => {
-      hasNextPage.value = res?.data?.Page.pageInfo.hasNextPage
-    })
+  static wrapResponse (res, length, type, background = false) {
+    if (!background) res.then(res => hasNextPage.value = res?.data?.Page?.pageInfo?.hasNextPage)
     return Array.from({ length }, (_, i) => ({ type, data: SectionsManager.fromPending(res, i) }))
   }
 
@@ -84,8 +82,8 @@ export default class SectionsManager {
     const arr = await _arr
     if (!arr) return null
     const { data, errors } = arr
-    if (!data && errors) throw errors[0]
-    return data?.Page.media[i]
+    if (!data?.Page && errors) throw errors[0]
+    return data?.Page?.media?.[i]
   }
 
   static sanitiseObject = Helper.sanitiseObject
@@ -119,13 +117,13 @@ function createSections () {
   const createSection = (section, variables = {}, staticSort) => ({ ...section, ...(section.sort && staticSort ? { sort: 'N/A' } : {}), variables: { ...variables, sort: settings.value.homeSections.find(([t]) => !staticSort && t === section.title)?.[1] ?? section.sort, ...(Array.isArray(sectionFormat(section.title)) && sectionFormat(section.title).length > 0 ? { format : sectionFormat(section.title) } : {}) } })
   return [
     // RSS feeds
-    ...settings.value.rssFeedsNew.filter(([title, url]) => url).map(([title, url]) => {
+    ...settings.value.rssFeedsNew.filter(([url]) => url).map(([title, url]) => {
       const section = {
         title,
         sort: 'N/A',
         format: ['N/A'],
-        load: (page = 1, perPage = 12) => RSSManager.getMediaForRSS(page, perPage, url),
-        preview: writable(RSSManager.getMediaForRSS(1, 12, url)),
+        load: (page = 1, perPage = 12, variables, background = false) => RSSManager.getMediaForRSS(page, perPage, url, false, false, background),
+        preview: writable(RSSManager.getMediaForRSS(1, 12, url, false, false, true)),
         variables: { disableSearch: true },
         isRSS: true
       }
@@ -134,7 +132,7 @@ function createSections () {
       section.interval = setInterval(async () => {
         try {
           if (await RSSManager.getContentChanged(1, 12, url)) {
-            section.preview.value = RSSManager.getMediaForRSS(1, 12, url, true)
+            section.preview.value = RSSManager.getMediaForRSS(1, 12, url, true, false, true)
           }
         } catch (error) {
           debug(`Failed to update RSS feed for ${url} at the scheduled interval, this is likely a temporary connection issue:`, JSON.stringify(error))
@@ -153,13 +151,13 @@ function createSections () {
         variables: { disableSearch: true },
         isRSS: true,
         isSchedule: true,
-        load: (page = 1, perPage = 50) => animeSchedule.getMediaForRSS(page, perPage, type),
-        preview: writable(animeSchedule.getMediaForRSS(1, 50, type)),
+        load: (page = 1, perPage = 50, variables, background = false) => animeSchedule.getMediaForRSS(page, perPage, type, background),
+        preview: writable(animeSchedule.getMediaForRSS(1, 50, type, true))
       }
     }),
     // user specific sections
     createSection({ title: 'Sequels You Missed', sort: 'POPULARITY_DESC', format: [], hide: !Helper.isAuthorized() || Helper.isMalAuth(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         if (Helper.isMalAuth()) return {} // not going to bother handling this, see below.
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
@@ -170,11 +168,11 @@ function createSections () {
           if (!ids.length) return {}
           return anilistClient.searchIDS({ page, perPage, id: ids, id_not: excludeIds, ...SectionsManager.sanitiseObject(variables), status: ['FINISHED', 'RELEASING'] })
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       } // disable this section when authenticated with MyAnimeList. API for userLists fail to return relations and likely will never be fixed on their end.
     }, { userList: true, missedList: true, disableHide: true }),
     createSection({ title: 'Stories You Missed', sort: 'POPULARITY_DESC', format: [], hide: !Helper.isAuthorized() || Helper.isMalAuth(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         if (Helper.isMalAuth()) return {} // same as Sequels You Missed
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
@@ -185,11 +183,11 @@ function createSections () {
           if (!ids.length) return {}
           return anilistClient.searchIDS({ page, perPage, id: ids, id_not: excludeIds, ...SectionsManager.sanitiseObject(variables), status: ['FINISHED', 'RELEASING'] })
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       } // disable this section when authenticated with MyAnimeList. API for userLists fail to return relations and likely will never be fixed on their end.
     }, { userList: true, missedList: true, disableHide: true }),
     createSection({ title: 'Continue Watching', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           let mediaList = Helper.isAniAuth() ? (res.data.MediaListCollection?.lists || []).reduce((filtered, { status, entries }) => (status === 'CURRENT' || status === 'REPEATING') ? filtered.concat(entries) : filtered, []) : (res.data.MediaList || []).filter(({ node }) => (node.my_list_status.status === Helper.statusMap('CURRENT') || node.my_list_status.is_rewatching))
@@ -234,11 +232,11 @@ function createSections () {
             })
           })
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, continueWatching: true, disableHide: true, status_not }),
     createSection({ title: 'Watching List', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
@@ -247,11 +245,11 @@ function createSections () {
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, disableHide: true, status_not }),
     createSection({ title: 'Rewatching List', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
@@ -260,11 +258,11 @@ function createSections () {
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, disableHide: true, status_not }),
     createSection({ title: 'Completed List', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
@@ -273,11 +271,11 @@ function createSections () {
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, completedList: true, disableHide: true, status_not }),
     createSection({ title: 'Planning List', sort: 'POPULARITY_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
@@ -286,11 +284,11 @@ function createSections () {
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, planningList: true, disableHide: true, status_not }),
     createSection({ title: 'Paused List', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
@@ -299,11 +297,11 @@ function createSections () {
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, disableHide: true, status_not }),
     createSection({ title: 'Dropped List', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
-      load: (page = 1, perPage = 50, variables = {}) => {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
         const res = Helper.userLists(variables).then(res => {
           if (!res?.data && res?.errors) throw res.errors[0]
           const mediaList = Helper.isAniAuth()
@@ -312,7 +310,7 @@ function createSections () {
           if (!mediaList) return {}
           return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
         })
-        return SectionsManager.wrapResponse(res, perPage)
+        return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, droppedList: true, disableHide: true, status_not }),
     // common, non-user specific sections
@@ -360,7 +358,7 @@ function refreshSections(list, sections, schedule = false) {
     for (const section of manager.sections) {
       // remove preview value, to force UI to re-request data, which updates it once in viewport
       if (sections.includes(section.title) && !section.hide && (!schedule || section.isSchedule)) {
-        const loaded = section.load(1, 50, section.variables)
+        const loaded = section.load(1, 50, section.variables, true)
         if (section.preview.value && !equal(await resolveData(loaded), await resolveData(section.preview.value))) section.preview.value = loaded
       }
     }
@@ -373,7 +371,7 @@ export function updateSections(updateFeeds, manifest) {
     try {
       if (section.isSchedule && updateFeeds.includes(section.title)) {
         animeSchedule.feedChanged(section.title.includes('Subbed') ? 'Sub' : section.title.includes('Dubbed') ? 'Dub' : 'Hentai', false, true, manifest).then((changed) => {
-          if (changed) section.preview.value = section.load(1, 50, section.variables)
+          if (changed) section.preview.value = section.load(1, 50, section.variables, true)
         })
       }
     } catch (error) {
@@ -388,7 +386,7 @@ export async function updateRSS() {
     if (section.isRSS && !section.isSchedule) {
       const url = settings.value.rssFeedsNew.find(([feedTitle]) => feedTitle === section.title)?.[1]
       if (url) {
-        const loaded = RSSManager.getMediaForRSS(1, 12, url, false, true)
+        const loaded = RSSManager.getMediaForRSS(1, 12, url, false, true, true)
         if (!section.preview.value || !equal(await resolveData(loaded), await resolveData(section.preview.value))) section.preview.value = loaded
       }
     }

@@ -66,8 +66,8 @@ class RSSMediaManager {
     this.resultMap = {}
   }
 
-  getMediaForRSS (page, perPage, url, ignoreErrors = false, ignoreChanged = false) {
-    const res = this._getMediaForRSS(page, perPage, url, ignoreChanged)
+  getMediaForRSS (page, perPage, url, ignoreErrors = false, ignoreChanged = false, background = false) {
+    const res = this._getMediaForRSS(page, perPage, url, ignoreChanged, background)
     if (!ignoreErrors) {
       res.catch(error => {
         if (!status.value.match(/offline/i)) {
@@ -109,7 +109,7 @@ class RSSMediaManager {
     return { content, pubDate, pullDate }
   }
 
-  async _getMediaForRSS (page, perPage, url, ignoreChanged = false) {
+  async _getMediaForRSS (page, perPage, url, ignoreChanged = false, background = false) {
     debug(`Getting media for RSS feed ${url} page ${page} perPage ${perPage}`)
     const changed = await this.getContentChanged(page, perPage, url, ignoreChanged)
     if (!changed) return this.resultMap[url].result
@@ -118,7 +118,7 @@ class RSSMediaManager {
     const index = (page - 1) * perPage
     const targetPage = [...changed.content.querySelectorAll('item')].slice(index, index + perPage)
     const items = parseRSSNodes(targetPage)
-    hasNextPage.value = items.length === perPage
+    if (!background) hasNextPage.value = items.length === perPage
     const result = this.structureResolveResults(items)
 
     const encodedUrl = btoa(url)

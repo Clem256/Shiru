@@ -180,7 +180,7 @@ class AnilistClient {
     debug('Initializing Anilist Client for ID ' + this.userID?.viewer?.data?.Viewer?.id)
     this.limiter.on('failed', async (error, jobInfo) => {
       if (status.value.match(/offline/i)) throw new Error('Failed making request to Anilist, network is offline... not retrying')
-      else if (error.status === 429 || jobInfo.retryCount >= 1) await printError('Search Failed', 'Failed making request to Anilist! Trying again in a minute.', error, 60_000)
+      else if (error.status === 429 || jobInfo.retryCount >= 1) await printError('Search Failed', 'Failed making request to Anilist! Trying again in a minute.', error, 20_000)
       const errorDebug = `Error: ${error.status || 429} - ${error.message || error.statusText || codes[error.status || 429]}`
 
       if (error.status === 429) { // rate limited...

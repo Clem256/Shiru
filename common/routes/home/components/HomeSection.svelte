@@ -37,7 +37,7 @@
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
         sectionVisible = true
-        if (!opts.preview.value) opts.preview.value = opts.load(1, loadableLength, { ...opts.variables })
+        if (!opts.preview.value) opts.preview.value = opts.load(1, loadableLength, { ...opts.variables }, true)
         observer.unobserve(element)
       }
     }, { threshold: 0, rootMargin: '200px' })
