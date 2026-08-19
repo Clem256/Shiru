@@ -42,7 +42,8 @@
   async function getRequestedAudio(search, result, audioLang, exactMatch = true) {
     const terms = [...new Map((await sanitiseTerms(search, result))?.map(term => [term.term.text, term.term])).values()]
     const checkTerm = (term, keyword) => (Array.isArray(term.text) ? term.text : [term.text]).some(text => text.toLowerCase().includes(keyword.toLowerCase()))
-    const exactAudio = terms.some(term => checkTerm(term, audioLang))
+    const audioKeyword = languages.find(language => language.value === audioLang)?.label || audioLang
+    const exactAudio = terms.some(term => checkTerm(term, audioKeyword))
     const dualAudio = terms.some(term => checkTerm(term, 'dual'))
     return exactAudio || (exactMatch ? exactAudio : dualAudio)
   }
@@ -56,17 +57,15 @@
   async function getBest(search, results, audioLang, torrentProvider = []) {
     if (!results || !results.length) return null
     const candidates = []
-    if (audioLang !== 'jpn') {
-      const checks = await Promise.all(
-        results.map(async result => ({
-          result,
-          exactBest: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 9,
-          exactAlt: (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 9,
-          dualBest: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 1,
-          dualAlt: (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 1
-        })))
-      candidates.push(...checks.filter(check => check.exactBest).map(check => check.result), ...checks.filter(check => check.exactAlt).map(check => check.result), ...checks.filter(check => check.dualBest).map(check => check.result), ...checks.filter(check => check.dualAlt).map(check => check.result))
-    }
+    const checks = await Promise.all(
+      results.map(async result => ({
+        result,
+        exactBest: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 9,
+        exactAlt: (await getRequestedAudio(search, result.parseObject, audioLang)) && result.seeders > 1,
+        dualBest: audioLang !== 'jpn' && (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 9,
+        dualAlt: audioLang !== 'jpn' && (await getRequestedAudio(search, result.parseObject, audioLang, false)) && result.seeders > 1
+      })))
+    candidates.push(...checks.filter(check => check.exactBest).map(check => check.result), ...checks.filter(check => check.exactAlt).map(check => check.result), ...checks.filter(check => check.dualBest).map(check => check.result), ...checks.filter(check => check.dualAlt).map(check => check.result))
     candidates.push(...results.filter(result => (result.type === 'best' || result.type === 'alt') && result.seeders > 9))
     const uniqueCandidates = Array.from(new Set(candidates))
     const toConsider = uniqueCandidates.length ? uniqueCandidates : results

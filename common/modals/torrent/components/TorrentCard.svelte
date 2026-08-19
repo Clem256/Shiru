@@ -102,6 +102,7 @@
   termMapping.DUALAUDIO = { text: 'Dual Audio', color: 'var(--octonary-color)' }
   termMapping.CHINESEAUDIO = { text: 'Chinese Audio', color: 'var(--octonary-color)' }
   termMapping.ENGLISHAUDIO = { text: 'English Audio', color: 'var(--octonary-color)' }
+  termMapping.JAPANESEAUDIO = { text: 'Japanese Audio', color: 'var(--octonary-color)' }
   termMapping['DUAL AUDIO'] = termMapping.DUALAUDIO
   termMapping['DUAL-AUDIO'] = termMapping.DUALAUDIO
   termMapping['MULTI AUDIO'] = termMapping.DUALAUDIO
@@ -119,6 +120,18 @@
   termMapping['ENG DUBBED'] = termMapping.ENGLISHAUDIO
   termMapping['ENG DUB'] = termMapping.ENGLISHAUDIO
   termMapping['EN DUB'] = termMapping.ENGLISHAUDIO
+  termMapping['JAPANESE AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPANESE DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPANESE DUB'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPAN AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPAN DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JAPAN DUB'] = termMapping.JAPANESEAUDIO
+  termMapping['JPN DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JPN AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JP DUBBED'] = termMapping.JAPANESEAUDIO
+  termMapping['JP AUDIO'] = termMapping.JAPANESEAUDIO
+  termMapping['JPN DUB'] = termMapping.JAPANESEAUDIO
+  termMapping['JP DUB'] = termMapping.JAPANESEAUDIO
   termMapping['DUAL'] = termMapping.DUALAUDIO
   termMapping['DUBBED'] = termMapping.ENGLISHAUDIO
   termMapping['DUB'] = termMapping.ENGLISHAUDIO
