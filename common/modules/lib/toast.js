@@ -64,6 +64,7 @@ function scheduleTimer(id, duration) {
   clearTimer(id)
   if (!duration || duration === Infinity) return
   const timeoutId = setTimeout(() => dismiss(id), duration)
+  timeoutId.unref?.()
   timers.set(id, { timeoutId, expiresAt: Date.now() + duration, remaining: null })
 }
 
@@ -207,6 +208,7 @@ function resume(id) {
   const timer = timers.get(id)
   if (!timer || timer.remaining == null) return
   timer.timeoutId = setTimeout(() => dismiss(id), timer.remaining)
+  timer.timeoutId.unref?.()
   timer.expiresAt = Date.now() + timer.remaining
   timer.remaining = null
 }

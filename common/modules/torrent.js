@@ -227,12 +227,10 @@ function setupTorrentClient() {
 
 function notify(type, detail) {
   debug(`${capitalize(type)}:`, detail.message || JSON.stringify(detail))
-  if (type === 'info') {
-    for (const exclude of excludedToastMessages) {
-      if ((detail.message || detail)?.toLowerCase()?.includes(exclude)) return
-    }
-    if (type === 'warn') toast.warning(`Torrent Warning`, { description: '' + (detail.message || detail), respectLevel: true })
-    else if (type === 'error') toast.error(`Torrent Error`, { description: '' + (detail.message || detail), respectLevel: true })
-    else toast.info(`Torrent ${capitalize(type)}`, { description: '' + (detail.message || detail) })
+  for (const exclude of excludedToastMessages) {
+    if ((detail.message || detail)?.toLowerCase()?.includes(exclude)) return
   }
+  if (type === 'warn') toast.warning(`Torrent Warning`, { description: '' + (detail.message || detail), respectLevel: true })
+  else if (type === 'error') toast.error(`Torrent Error`, { description: '' + (detail.message || detail), respectLevel: true })
+  else toast.info(`Torrent ${capitalize(type)}`, { description: '' + (detail.message || detail) })
 }

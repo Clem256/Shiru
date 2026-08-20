@@ -13,7 +13,7 @@
 <script>
   import { statusColorMap } from '@/modules/anime/anime.js'
   import { episodesList } from '@/modules/episodes.js'
-  import { hoverClick } from '@/modules/lib/click.js'
+  import { hoverClick, getInteractionMethod } from '@/modules/lib/click.js'
   import { liveAnimeEpisodeProgress } from '@/modules/anime/animeprogress.js'
   import { anilistClient } from '@/modules/providers/anilist/anilist.js'
   import { settings } from '@/modules/settings.js'
@@ -48,7 +48,10 @@
   function setClickState() {
     const episode = isValidNumber(data.episode) ? data.episode : ((media?.episodes === 1 && media?.episodes) || (!media?.episodes && (media?.format === 'MOVIE' || media?.format === 'OVA' || media?.format === 'SPECIAL') && 1))
     if (!$prompt && !data.similarity && isValidNumber(episode) && !Array.isArray(episode) && (episode - 1) >= 1 && media?.mediaListEntry?.status !== 'COMPLETED' && (media?.mediaListEntry?.progress || -1) < (episode - 1)) prompt.set(true)
-    else isValidNumber(episode) ? (media ? playActive(data.hash, { media, episode: episode }, data.link, !data.link) : data.onclick()) : viewMedia()
+    else {
+      prompt.set(false)
+      isValidNumber(episode) ? (media ? playActive(data.hash, { media, episode: episode }, data.link, !data.link) : data.onclick()) : viewMedia()
+    }
     clicked.set(true)
     setTimeout(() => clicked.set(false)).unref?.()
   }
@@ -70,7 +73,7 @@
   let focusTimeout
   let blurTimeout
   function handleFocus() {
-    if (ignoreFocus || preview) return
+    if (ignoreFocus || preview || !['keyboard', 'dpad'].includes(getInteractionMethod())) return
     clearTimeouts()
     focusTimeout = setTimeout(() => {
       if (settings.value.cardPreview) {
@@ -85,8 +88,9 @@
     clearTimeouts()
     blurTimeout = setTimeout(() => {
       const focused = document.activeElement
-      const lostFocus = container && focused?.offsetParent != null && !container.contains(focused)
-      const lostPreviewFocus = previewCard && !previewCard.contains(focused)
+      const stillFocused = focused?.offsetParent != null
+      const lostFocus = container && (!stillFocused || !container.contains(focused))
+      const lostPreviewFocus = previewCard && (!stillFocused || !previewCard.contains(focused))
       if (lostFocus && lostPreviewFocus) {
         preview = false
         ignoreFocus = false

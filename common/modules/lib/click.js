@@ -9,6 +9,15 @@ let lastInteractionMethod = 'mouse'
 
 const noop = _ => {}
 
+/**
+ * Gets the most recent interaction method used by the user.
+ *
+ * @returns {'mouse'|'touch'|'keyboard'|'dpad'} The last interaction method.
+ */
+export function getInteractionMethod() {
+  return lastInteractionMethod
+}
+
 document.addEventListener('mousedown', () => lastInteractionMethod = 'mouse')
 document.addEventListener('touchstart', () => lastInteractionMethod = 'touch', { passive: true })
 document.addEventListener('focusin', (e) => {

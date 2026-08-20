@@ -3,7 +3,7 @@
   import PreviewCard from '@/components/cards/PreviewCard.svelte'
   import { airingAt, getAiringInfo, formatMap, statusColorMap } from '@/modules/anime/anime.js'
   import { createListener, baseFontSize, resizeObserver } from '@/modules/util.js'
-  import { hoverClick } from '@/modules/lib/click.js'
+  import { hoverClick, getInteractionMethod } from '@/modules/lib/click.js'
   import SmartImage from '@/components/visual/SmartImage.svelte'
   import AudioLabel from '@/components/AudioLabel.svelte'
   import { anilistClient, currentYear } from '@/modules/providers/anilist/anilist.js'
@@ -43,7 +43,7 @@
   let focusTimeout
   let blurTimeout
   function handleFocus() {
-    if (ignoreFocus || preview) return
+    if (ignoreFocus || preview || !['keyboard', 'dpad'].includes(getInteractionMethod())) return
     clearTimeouts()
     focusTimeout = setTimeout(() => {
       if (settings.value.cardPreview) {
@@ -58,8 +58,9 @@
     clearTimeouts()
     blurTimeout = setTimeout(() => {
       const focused = document.activeElement
-      const lostFocus = container && focused?.offsetParent != null && !container.contains(focused)
-      const lostPreviewFocus = previewCard && !previewCard.contains(focused)
+      const stillFocused = focused?.offsetParent != null
+      const lostFocus = container && (!stillFocused || !container.contains(focused))
+      const lostPreviewFocus = previewCard && (!stillFocused || !previewCard.contains(focused))
       if (lostFocus && lostPreviewFocus) {
         preview = false
         ignoreFocus = false
