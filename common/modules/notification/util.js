@@ -14,12 +14,16 @@ const SYSTEM_KEYS = ['id', 'title', 'message', 'timestamp', 'icon', 'iconXL', 'h
  */
 export function sort(array) {
   return array.sort((a, b) => {
-    const timeDiff = b.timestamp - a.timestamp
+    const timeDiff = (b.timestamp || 0) - (a.timestamp || 0)
     if (timeDiff !== 0) return timeDiff
+    const aEpisode = isValidNumber(a.episode) && a.episode >= 0 ? a.episode : null
+    const bEpisode = isValidNumber(b.episode) && b.episode >= 0 ? b.episode : null
+    const aSeason = isValidNumber(a.season) && a.season >= 0 ? a.season : 0
+    const bSeason = isValidNumber(b.season) && b.season >= 0 ? b.season : 0
     if (a.id === b.id
-      && isValidNumber(a.episode) && isValidNumber(b.episode)
-      && isValidNumber(a.season) && isValidNumber(b.season)) {
-      return b.episode - a.episode
+      && aEpisode !== null && bEpisode !== null
+      && aSeason === bSeason) {
+      return bEpisode - aEpisode
     }
     return 0
   }).sort((a, b) => {
@@ -142,7 +146,7 @@ export function splitLocalAndSystem(notifications) {
   }
   return {
     localNotifications,
-    systemNotifications: systemNotifications.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 20)
+    systemNotifications: sort(systemNotifications).slice(0, 20)
   }
 }
 
