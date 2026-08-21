@@ -1,6 +1,6 @@
 <script context='module'>
   import { settings } from '@/modules/settings.js'
-  import { debounce, matchPhrase } from '@/modules/util.js'
+  import { debounce, matchPhrase, equalsIgnoreCase } from '@/modules/util.js'
   import { sanitiseTerms } from '@/modals/torrent/components/TorrentCard.svelte'
   import { add } from '@/modules/torrent.js'
   import { nowPlaying as currentMedia } from '@/components/MediaHandler.svelte'
@@ -218,7 +218,7 @@
     const cachedTorrents = []
     const torrents = [...completedTorrents.value, ...seedingTorrents.value, ...stagingTorrents.value, loadedTorrent.value].filter(Boolean)
     for (const cached of cachedHashes) {
-      const torrent = torrents.find(torrent => torrent.infoHash === cached.hash)
+      const torrent = torrents.find(torrent => equalsIgnoreCase(torrent.infoHash, cached.hash))
       if (!torrent) continue
       const title = AnimeResolver.cleanFileName(torrent.name)
       let searchEpisode = search?.episode
@@ -349,8 +349,8 @@
 
   $: if (!$settings.rssAutoplay) clearTimeout(timeoutHandle)
   $: autoPlay(best, $results?.resolved)
+  $: lastMagnet = cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.[`${search?.episode}`] || cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.batch
 
-  const lastMagnet = cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.[`${search?.episode}`] || cache.getEntry(caches.HISTORY, 'lastMagnet')?.[`${search?.media?.id}`]?.batch
   let searchText = ''
 
   /** @param {import('../../../../extensions').TorrentResult} result */
@@ -522,14 +522,14 @@
       {#if best}<TorrentCard type='best' countdown={$settings.rssAutoplay && $results?.resolved ? countdown : -1} result={best} {play} media={search.media} episode={search.episode} />{/if}
       {#if lastMagnet}
         {#each filterResults(lookup, searchText) as result}
-          {#if ((result.link === lastMagnet.link) || (result.hash === lastMagnet.hash)) && (result.seeders ?? 0) > 1 && ((best?.link !== lastMagnet.link) && (best?.hash !== lastMagnet.hash)) }
+          {#if (equalsIgnoreCase(result.link, lastMagnet.link) || equalsIgnoreCase(result.hash, lastMagnet.hash)) && (result.seeders ?? 0) > 1 && (!equalsIgnoreCase(best?.link, lastMagnet.link) && !equalsIgnoreCase(best?.hash, lastMagnet.hash)) }
             <TorrentCard type='magnet' result={result} {play} media={search.media} episode={search.episode} />
           {/if}
         {/each}
       {/if}
     {/if}
     {#each filterResults(lookup, searchText) as result}
-      {#if ((best?.link !== result.link) && (best?.hash !== result.hash)) && (!lastMagnet || (((result.link !== lastMagnet.link) || (result.hash !== lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
+      {#if (!equalsIgnoreCase(best?.link, result.link) && !equalsIgnoreCase(best?.hash, result.hash)) && (!lastMagnet || ((!equalsIgnoreCase(result.link, lastMagnet.link) || !equalsIgnoreCase(result.hash, lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
         <TorrentCard {result} {play} media={search.media} episode={search.episode} />
       {/if}
     {/each}
@@ -559,7 +559,7 @@
       </button>
       {#if viewHidden}
         {#each filterResults(lookupHidden, searchText) as result}
-          {#if (!best || ((best.link !== result.link) && (best.hash !== result.hash))) && (!lastMagnet || (((result.link !== lastMagnet.link) || (result.hash !== lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
+          {#if (!best || (!equalsIgnoreCase(best.link, result.link) && !equalsIgnoreCase(best.hash, result.hash))) && (!lastMagnet || ((!equalsIgnoreCase(result.link, lastMagnet.link) || !equalsIgnoreCase(result.hash, lastMagnet.hash)) || (result.seeders ?? 0) <= 1))}
             <div class='unavailable'><TorrentCard {result} {play} media={search.media} episode={search.episode} /></div>
           {/if}
         {/each}
