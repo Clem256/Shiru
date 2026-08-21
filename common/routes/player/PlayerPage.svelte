@@ -806,7 +806,7 @@
     Space: {
       fn: () => !viewAnime && playPause(),
       id: 'play_arrow',
-      play: Play,
+      icon: Play,
       type: 'icon',
       desc: 'Play/Pause'
     },
