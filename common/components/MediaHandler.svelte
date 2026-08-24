@@ -96,43 +96,48 @@
    * @param {number} duration - The duration of the video in seconds.
    */
   async function handleRanged({ detail: { current, duration } }) {
-      if (duration && (duration > 120) && nowPlaying.value?.episode && nowPlaying.value?.media?.duration && !nowPlaying.value?.episodeRange) {
-          // We need check the mappings to verify that the episode isn't actually an ultra-long premiere episode like "Oshi No Ko", Anilist doesn't differentiate these so we need to manually check.
-          const mappings = (!nowPlaying.value.media.episodes || !nowPlaying.value.media.episodes <= 100) && (await getAniMappings(nowPlaying.value.media.id) || {})?.episodes
-          const episode = mappings && (mappings[nowPlaying.value.episode] || Object.values(mappings)?.find(episode => ((episode.episode || episode.episodeNumber) && Number((episode.episode || episode.episodeNumber))) === Number(nowPlaying.value.episode) && episode.length > 1))
-          debug(`Duration of the current media has changed, checking for multiple episodes in the video file for: ${JSON.stringify(nowPlaying.value.parseObject)}`)
-          const mediaDuration = (episode?.length && episode.length * 60) || (nowPlaying.value.media.duration * 60)
-          if (duration > (mediaDuration + 360)) { // Add 6 minutes (360 second) buffer
-              const episodeMultiplier = Math.round(duration / mediaDuration) // Round to nearest whole number
-              const startingEpisode = (nowPlaying.value.episode * episodeMultiplier) - (episodeMultiplier - 1)
-              const finalEpisode = nowPlaying.value.episode * episodeMultiplier
-              if (startingEpisode !== finalEpisode) {
-                  debug(`Multiple episodes have been detected in the video file for: ${JSON.stringify(nowPlaying.value.parseObject)}`)
-                  current.media.episodeRange = {
-                      first: startingEpisode,
-                      last: finalEpisode
-                  }
-                  await handleMedia({
-                      media: nowPlaying.value.media,
-                      episode: nowPlaying.value.episode,
-                      episodeRange: current.media.episodeRange,
-                      parseObject: nowPlaying.value.parseObject,
-                      failed: nowPlaying.failed,
-                  })
-                  setTimeout(() =>{
-                      setHash(current.infoHash, {
-                          fileHash: current.fileHash,
-                          mediaId: current.media.media.id,
-                          episodeRange: current.media.episodeRange,
-                          episode: current.media.episode || current.media.parseObject.episode_number,
-                          season: current.media.season || current.media.parseObject.anime_season,
-                          parseObject: current.media.parseObject,
-                          failed: current.media.failed || current.media.parseObject.failed
-                      })
-                  })
-              }
+    if (duration && (duration > 120) && nowPlaying.value?.episode && nowPlaying.value?.media?.duration && !nowPlaying.value?.episodeRange) {
+      // We need check the mappings to verify that the episode isn't actually an ultra-long premiere episode like "Oshi No Ko", Anilist doesn't differentiate these so we need to manually check.
+      const mappings = (!nowPlaying.value.media.episodes || !nowPlaying.value.media.episodes <= 100) && (await getAniMappings(nowPlaying.value.media.id) || {})?.episodes
+      const episode = mappings && (mappings[nowPlaying.value.episode] || Object.values(mappings)?.find(episode => ((episode.episode || episode.episodeNumber) && Number((episode.episode || episode.episodeNumber))) === Number(nowPlaying.value.episode) && episode.length > 1))
+      debug(`Duration of the current media has changed, checking for multiple episodes in the video file for: ${JSON.stringify(nowPlaying.value.parseObject)}`)
+      const mediaDuration = (episode?.length && episode.length * 60) || (nowPlaying.value.media.duration * 60)
+      if (duration > (mediaDuration + 360)) { // Add 6 minutes (360 second) buffer
+        const episodeMultiplier = Math.round(duration / mediaDuration) // Round to nearest whole number
+        const startingEpisode = (nowPlaying.value.episode * episodeMultiplier) - (episodeMultiplier - 1)
+        const finalEpisode = nowPlaying.value.episode * episodeMultiplier
+        const totalEpisodes =  nowPlaying.value.media.episodes || mappings?.episodeCount || null
+        if (!(episodeMultiplier > 1 && episodeMultiplier <= (nowPlaying.value.media?.episodes ?? 4) && (!totalEpisodes || finalEpisode <= totalEpisodes))) {
+          debug(`Rejected episode range for: ${JSON.stringify(nowPlaying.value.parseObject)} - multiplier ${episodeMultiplier}, final episode ${finalEpisode} exceeds known bounds (total: ${totalEpisodes}). Likely a bogus duration reading.`)
+          return
+        }
+        if (startingEpisode !== finalEpisode) {
+          debug(`Multiple episodes have been detected in the video file for: ${JSON.stringify(nowPlaying.value.parseObject)}`)
+          current.media.episodeRange = {
+            first: startingEpisode,
+            last: finalEpisode
           }
+          await handleMedia({
+            media: nowPlaying.value.media,
+            episode: nowPlaying.value.episode,
+            episodeRange: current.media.episodeRange,
+            parseObject: nowPlaying.value.parseObject,
+            failed: nowPlaying.failed,
+          })
+          setTimeout(() => {
+            setHash(current.infoHash, {
+              fileHash: current.fileHash,
+              mediaId: current.media.media.id,
+              episodeRange: current.media.episodeRange,
+              episode: current.media.episode || current.media.parseObject.episode_number,
+              season: current.media.season || current.media.parseObject.anime_season,
+              parseObject: current.media.parseObject,
+              failed: current.media.failed || current.media.parseObject.failed
+            })
+          })
+        }
       }
+    }
   }
 
   async function handleMedia (opts, newPlaying) {
