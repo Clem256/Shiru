@@ -43,6 +43,9 @@ export function setHash(hash, data) {
                     updatedAt: Date.now()
                 })
                 if ((data.locked || !data.failed) && existingFile.failed) delete existingFile.failed
+                if (!data.episode && existingFile.episode) delete existingFile.episode
+                if (!data.season && existingFile.season) delete existingFile.season
+                if (!data.episodeRange && existingFile.episodeRange) delete existingFile.episodeRange
             } else pushFiles(files, data)
             existing.files = files
             if (!data.failed || data.locked) {
@@ -50,6 +53,9 @@ export function setHash(hash, data) {
                 existing.updatedAt = Date.now()
             }
             if ((data.locked || !data.failed) && existing.failed) delete existing.failed
+            if (!data.episode && existing.episode) delete existing.episode
+            if (!data.season && existing.season) delete existing.season
+            if (!data.episodeRange && existing.episodeRange) delete existing.episodeRange
         } else {
             Object.assign(existing, {
                 hash,
@@ -63,6 +69,9 @@ export function setHash(hash, data) {
                 updatedAt: Date.now()
             })
             if ((data.locked || !data.failed) && existing.failed) delete existing.failed
+            if (!data.episode && existing.episode) delete existing.episode
+            if (!data.season && existing.season) delete existing.season
+            if (!data.episodeRange && existing.episodeRange) delete existing.episodeRange
         }
     } else {
         const files = []
