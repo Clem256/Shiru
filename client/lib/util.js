@@ -135,3 +135,14 @@ export async function getInfoHash(input) {
     return null
   }
 }
+
+/**
+ * Gets ratio for a torrent from cache.
+ * @param {object} cache - Cached torrent object.
+ * @param {number} size - Total size of the torrent in bytes.
+ * @param {number} progress - Progress of the torrent.
+ * @returns {number}
+ */
+export function getRatio(cache, size, progress) {
+  return (cache?._uploaded || 0) / (((progress || 0) * (size || 0)) || size || 1)
+}
