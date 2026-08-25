@@ -137,6 +137,37 @@ export async function getInfoHash(input) {
 }
 
 /**
+ * Builds a stats object for a torrent, used when sending updates to the renderer.
+ * @param {import('webtorrent').Torrent|object} torrent - The torrent or cached torrent object
+ * @param {boolean} [completed=false] - True if torrent is a completed/cached torrent.
+ * @returns {object}
+ */
+export function getStats(torrent, completed = false) {
+  return {
+    infoHash: torrent?.infoHash,
+    name: torrent?.name,
+    size: torrent?.length,
+    current: torrent?.current,
+    staging: torrent?.staging,
+    seeding: torrent?.seeding,
+    progress: torrent?.progress,
+    numSeeders: torrent?.wires?.filter(wire => wire.isSeeder).length || 0,
+    totalSeeders: torrent?.seeders || 0,
+    numLeechers: (torrent?.wires?.length - torrent?.wires?.filter(wire => wire.isSeeder).length) || 0,
+    totalLeechers: torrent?.leechers || 0,
+    numPeers: torrent?.numPeers || 0,
+    downloadSpeed: torrent?.downloadSpeed || 0,
+    uploadSpeed: torrent?.uploadSpeed || 0,
+    magnetURI: torrent?.magnetURI,
+    date: torrent?.date ?? new Date(Date.now() - 1_000).toUTCString(),
+    ...(!torrent?.current && !torrent?.staging && !torrent?.seeding ? { incomplete: torrent?.incomplete || torrent?.progress < 1 } : {}),
+    ...(torrent?.missing_pieces ? { missing_pieces: torrent.missing_pieces } : {}),
+    eta: torrent?.timeRemaining,
+    ratio: torrent?.ratio || (torrent && getRatio(torrent, torrent?.length, torrent?.progress))
+  }
+}
+
+/**
  * Gets ratio for a torrent from cache.
  * @param {object} cache - Cached torrent object.
  * @param {number} size - Total size of the torrent in bytes.

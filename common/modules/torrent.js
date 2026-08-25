@@ -84,9 +84,11 @@ TORRENT.portRequest(_settings).then(() => {
   })
 
   TORRENT.onLoaded(detail => {
-    cache.setEntry(caches.GENERAL, 'loadedTorrent', detail)
-    debug(`Got loaded request for torrent:`, detail?.infoHash)
-    deduplicate(detail?.infoHash)
+    const { stats, ...data } = detail
+    loadedTorrent.update(() => stats || {})
+    cache.setEntry(caches.GENERAL, 'loadedTorrent', data)
+    debug(`Got loaded request for torrent:`, data?.infoHash)
+    deduplicate(data?.infoHash)
   })
 
   TORRENT.onUntrack(detail => {
@@ -95,22 +97,22 @@ TORRENT.portRequest(_settings).then(() => {
   })
 
   TORRENT.onStage(detail => {
-    debug(`Staging torrent:`, JSON.stringify(detail))
+    debug(`Staging torrent:`, JSON.stringify(detail.infoHash))
     const torrents = cache.getEntry(caches.GENERAL, 'stagingTorrents') || []
-    if (!torrents.includes(detail)) {
-      cache.setEntry(caches.GENERAL, 'stagingTorrents', Array.from(new Set([...torrents, detail])))
-    }
-    const found = structuredClone(seedingTorrents.value.find(torrent => equalsIgnoreCase(torrent.infoHash, detail)) || completedTorrents.value.find(torrent => equalsIgnoreCase(torrent.infoHash, detail)))
-    deduplicate(detail, 'seedingTorrents', 'completedTorrents')
-    if (equalsIgnoreCase(loadedTorrent.value?.infoHash, detail)) loadedTorrent.update(() => ({}))
-    if (found) (found.incomplete ? stagingTorrents : seedingTorrents).update(prev => [found, ...prev.filter(torrent => !equalsIgnoreCase(torrent.infoHash, detail))])
+    if (!torrents.includes(detail.infoHash)) cache.setEntry(caches.GENERAL, 'stagingTorrents', Array.from(new Set([...torrents, detail.infoHash])))
+    const found = structuredClone(seedingTorrents.value.find(torrent => equalsIgnoreCase(torrent.infoHash, detail.infoHash)) || completedTorrents.value.find(torrent => equalsIgnoreCase(torrent.infoHash, detail.infoHash)))
+    deduplicate(detail.infoHash, 'seedingTorrents', 'completedTorrents')
+    if (equalsIgnoreCase(loadedTorrent.value?.infoHash, detail.infoHash)) loadedTorrent.update(() => ({}))
+    if (found) (found.incomplete ? stagingTorrents : seedingTorrents).update(prev => [found, ...prev.filter(torrent => !equalsIgnoreCase(torrent.infoHash, detail.infoHash))])
+    stagingTorrents.update(prev => [detail, ...prev.filter(torrent => !equalsIgnoreCase(torrent.infoHash, detail.infoHash))])
   })
 
   TORRENT.onSeed(detail => {
-    debug(`Seeding torrent:`, JSON.stringify(detail))
+    debug(`Seeding torrent:`, JSON.stringify(detail.infoHash))
     const torrents = cache.getEntry(caches.GENERAL, 'seedingTorrents') || []
-    if (!torrents.includes(detail)) cache.setEntry(caches.GENERAL, 'seedingTorrents', Array.from(new Set([...torrents, detail])))
-    deduplicate(detail, 'stagingTorrents', 'completedTorrents')
+    if (!torrents.includes(detail.infoHash)) cache.setEntry(caches.GENERAL, 'seedingTorrents', Array.from(new Set([...torrents, detail.infoHash])))
+    deduplicate(detail.infoHash, 'stagingTorrents', 'completedTorrents')
+    seedingTorrents.update(prev => [detail, ...prev.filter(torrent => !equalsIgnoreCase(torrent.infoHash, detail.infoHash))])
   })
 
   TORRENT.onComplete(detail => {
