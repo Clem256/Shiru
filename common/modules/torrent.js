@@ -64,7 +64,7 @@ TORRENT.portRequest(_settings).then(() => {
       force: true,
       dedupe: true
     })
-    setupTorrentClient()
+    TORRENT.portRequest(_settings).then(() => setupTorrentClient())
   })
   TORRENT.onRequest(opts => {
     ELECTRON.showAndFocus()

@@ -2,8 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 const listeners = {}
 let _port = null
-let _resolvePort = null
-let _portReady = new Promise(resolve => { _resolvePort = resolve })
+let _portReady, _resolvePort
+function resetPortReady() {
+  _portReady = new Promise(resolve => { _resolvePort = resolve })
+}
+resetPortReady()
 
 function addListener(type, callback) {
   if (!listeners[type]) listeners[type] = []
@@ -91,6 +94,7 @@ contextBridge.exposeInMainWorld('torrent', {
     addListener('error', (detail) => callback('error', detail))
   },
   portRequest: (settings) => new Promise(resolve => {
+    resetPortReady()
     ipcRenderer.once('electron:torrentPort', ({ ports }) => {
       _port = ports[0]
       _port.addEventListener('message', ({ data }) => {
@@ -98,8 +102,8 @@ contextBridge.exposeInMainWorld('torrent', {
         if (cbs) cbs.forEach(callback => callback(data.data))
       })
       _port.start()
-      resolve()
       _resolvePort()
+      resolve()
     })
     ipcRenderer.invoke('torrent:portRequest', settings)
   })

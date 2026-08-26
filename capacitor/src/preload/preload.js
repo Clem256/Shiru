@@ -48,8 +48,11 @@ ForegroundService.createNotificationChannel({
 
 const listeners = {}
 let _port = null
-let _resolvePort = null
-let _portReady = new Promise(resolve => { _resolvePort = resolve })
+let _portReady, _resolvePort
+function resetPortReady() {
+  _portReady = new Promise(resolve => { _resolvePort = resolve })
+}
+resetPortReady()
 
 function addListener(type, callback) {
   if (!listeners[type]) listeners[type] = []
@@ -137,6 +140,7 @@ window.torrent = {
     addListener('error', (detail) => callback('error', detail))
   },
   portRequest: async (settings) => {
+    resetPortReady()
     _port = await ipcWire.invoke('torrent:portRequest', settings)
     _port.onmessage(({ data }) => {
       const cbs = listeners[data.type]
