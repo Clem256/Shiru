@@ -1,15 +1,35 @@
 <script>
+  import { ELECTRON, COMMON } from '@/modules/bridge.js'
   import { persisted } from 'svelte-persisted-store'
   import { SUPPORTS } from '@/modules/support.js'
-  import { ELECTRON, COMMON } from '@/modules/bridge.js'
+  import { onMount } from 'svelte'
+
   export let primary = true
 
-  let fullScreen = false
-  ELECTRON.isFullScreen().then(isFullScreen => {
-    fullScreen = isFullScreen
-    ELECTRON.onFullScreen((isFullScreen) => fullScreen = isFullScreen)
-  })
   const debug = persisted('debug', '', { serializer: { parse: e => e, stringify: e => e } })
+  let fullScreen = false
+
+  function tagScrollbarOffsets(root = document.body) {
+    root.querySelectorAll('*').forEach(el => {
+      if (!(el instanceof HTMLElement)) return
+      if (el.scrollHeight > el.clientHeight && getComputedStyle(el).overflowY !== 'visible') {
+        const offset = Math.max(0, 28 - el.getBoundingClientRect().top)
+        el.style.setProperty('--scrollbar-title-offset', offset ? `${offset}px` : '0px')
+      }
+    })
+  }
+
+  onMount(() => {
+    ELECTRON.isFullScreen().then(isFullScreen => {
+      fullScreen = isFullScreen
+      ELECTRON.onFullScreen((isFullScreen) => fullScreen = isFullScreen)
+    })
+    if (!SUPPORTS.isAndroid) {
+      tagScrollbarOffsets()
+      new MutationObserver(() => tagScrollbarOffsets()).observe(document.body, { childList: true, subtree: true })
+      window.addEventListener('resize', () => tagScrollbarOffsets())
+    }
+  })
 </script>
 
 <div class='w-full z-101 navbar bg-transparent border-0 p-0 d-none draggable' class:d-flex={!SUPPORTS.isAndroid && !fullScreen} class:position-absolute={!primary} class:ml-sb={!SUPPORTS.isAndroid && primary && (COMMON.getPlatformInfo().platform !== 'darwin' || fullScreen)}>

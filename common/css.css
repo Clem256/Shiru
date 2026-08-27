@@ -689,6 +689,10 @@ body {
   font-family: 'Nunito Variable';
 }
 
+*::-webkit-scrollbar-track {
+  margin-top: var(--scrollbar-title-offset, 0px);
+}
+
 .font-size-13 {
   font-size: 1.3rem !important;
 }
