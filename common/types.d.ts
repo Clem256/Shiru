@@ -18,7 +18,7 @@ declare global {
       onCrash: (callback: () => void) => void
       onRequest: (callback: (updateVersion: any) => void) => void
       debug: (debug: any) => void
-      rescan: () => Promise<void>
+      rescan: () => Promise<{ missingCount: number, removedCount: number }>,
       scrape: (id: any, infoHashes: any) => Promise<any>
       stream: (id: any, hash: any, magnet: any, base64: any) => void
       stage: (id: any, hash: any) => void

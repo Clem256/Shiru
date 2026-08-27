@@ -321,6 +321,9 @@
 .wm-600 {
   max-width: 60rem;
 }
+.wm-726 {
+  max-width: 72.6rem;
+}
 .wm-1000 {
   max-width: 100rem;
 }
@@ -569,6 +572,9 @@ a[href]:active, button:not([disabled], .not-reactive):active, fieldset:not([disa
 .mb-1 {
   margin-bottom: .1rem !important;
 }
+.mb-3 {
+  margin-bottom: .3rem !important;
+}
 .mb-4 {
   margin-bottom: .4rem !important;
 }
@@ -683,6 +689,9 @@ body {
   font-family: 'Nunito Variable';
 }
 
+.font-size-13 {
+  font-size: 1.3rem !important;
+}
 .font-weight-very-bold {
   font-weight: 900;
 }
@@ -695,6 +704,9 @@ body {
   color: var(--octonary-color) !important;
 }
 
+.text-warning {
+  color: var(--warning-color) !important;
+}
 .text-warning-dim {
   color: var(--warning-color-dim) !important;
 }
@@ -797,11 +809,17 @@ body {
   inset: 0;
 }
 
+.gap-3 {
+  gap: .3rem;
+}
 .gap-5 {
   gap: .5rem;
 }
 .gap-10 {
   gap: 1rem !important;
+}
+.gap-20 {
+  gap: 2rem;
 }
 
 .btn:disabled {
@@ -1146,8 +1164,31 @@ img[src=''], img[src=' '] {
   }
 }
 
+.t-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 1.2fr) minmax(0, 1.4fr) repeat(6, minmax(0, 1.5fr)) minmax(0, 1fr) 6rem;
+}
+
+@media (max-width: 992px) {
+  .t-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 1.2fr) minmax(0, 1.4fr) repeat(4, minmax(0, 1.5fr)) minmax(0, 1fr) 6rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .t-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 1.4fr) repeat(2, minmax(0, 1.5fr)) minmax(0, 1fr) 4rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .t-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 1.4fr) minmax(0, .8fr) minmax(0, 1.5fr) 4rem !important;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
-  button:not([disabled]), input:not([disabled]), input:not([disabled]):not(.input-group input, .long-input), .input-group:not(:has(input:disabled)):not(:has(input.long-input)):not(.long-input), .icon.text-white:not([disabled]) > svg, .icon.text-dark-light:not([disabled]) > svg, .button:not([disabled]) > svg, .custom-switch:not([disabled]), .form-control:not([disabled], .long-input), .progressive:not([disabled]), .long-input:not([disabled]), .long-button:not([disabled]) {
+  button:not([disabled], .no-scale), input:not([disabled]), input:not([disabled]):not(.input-group input, .long-input), .input-group:not(:has(input:disabled)):not(:has(input.long-input)):not(.long-input), .icon.text-white:not([disabled]) > svg, .icon.text-dark-light:not([disabled]) > svg, .button:not([disabled]) > svg, .custom-switch:not([disabled]), .form-control:not([disabled], .long-input), .progressive:not([disabled]), .long-input:not([disabled]), .long-button:not([disabled]) {
     transition: scale 0.2s ease;
   }
   button.bg-dark:not([disabled]):hover {
@@ -1168,7 +1209,7 @@ img[src=''], img[src=' '] {
   .icon.text-white:not([disabled]):hover > svg, .icon.text-dark-light:not([disabled]):hover > svg, .button:not([disabled]):hover > svg, .progressive:not([disabled]):hover {
     scale: 1.15;
   }
-  button:not([disabled], .long-button):hover {
+  button:not([disabled], .long-button, .no-scale):hover {
     scale: 1.04;
   }
   .long-button:not([disabled]):hover {

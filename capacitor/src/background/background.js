@@ -2,9 +2,9 @@ import { channel } from 'bridge'
 import { statfs } from 'fs/promises'
 import { env, stdout, stderr } from 'node:process'
 
-async function storageQuota (directory) {
-  const { bsize, bavail } = await statfs(directory)
-  return bsize * bavail
+async function diskSpace(directory) {
+  const { bsize, blocks, bavail } = await statfs(directory)
+  return { total: bsize * blocks, free: bsize * bavail }
 }
 
 let client
@@ -53,7 +53,7 @@ channel.on('port-init', async() => {
     clearInterval(heartbeatId)
     await destroy()
     const { default: TorrentClient } = await import('webtorrent-client')
-    client = new TorrentClient(channel, storageQuota, 'node', { ...settings, torrentPathNew: (settings.torrentPathNew || env.TMPDIR), TMPDIR: env.TMPDIR })
+    client = new TorrentClient(channel, diskSpace, 'node', { ...settings, torrentPathNew: (settings.torrentPathNew || env.TMPDIR), TMPDIR: env.TMPDIR })
   })
 })
 

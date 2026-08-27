@@ -15,6 +15,10 @@
           <div class='font-size-22 text-center text-muted'>
             {#if JSON.stringify(errors)?.match(/found no results/i) || JSON.stringify(errors)?.match(/will be released on|hasn't released yet/i)}
               No results found.
+            {:else if JSON.stringify(errors)?.match(/found no loaded torrents/i)}
+              No Torrents
+            {:else if JSON.stringify(errors)?.match(/loading torrent library/i)}
+              Loading Your Library
             {:else if (JSON.stringify(errors)?.match(/extension is not enabled/i) && !errors?.filter(error => !error?.message.match(/extension is not enabled/i))?.length) || JSON.stringify(errors)?.match(/sources configured/i)}
               No Extensions Installed
             {:else if JSON.stringify(errors)?.match(/changelog unavailable/i)}
@@ -33,6 +37,10 @@
             It looks like you haven't added any extension sources, manage your extensions in the settings.
           {:else if JSON.stringify(errors)?.match(/found no results/i)}
             You can manually specify a torrent by providing a link or file.
+          {:else if JSON.stringify(errors)?.match(/found no loaded torrents/i)}
+            Add a torrent using a magnet link or torrent file to get started.
+          {:else if JSON.stringify(errors)?.match(/loading torrent library/i)}
+            Your torrents are being loaded from your library, this may take a moment...
           {:else if JSON.stringify(errors)?.match(/changelog unavailable/i)}
             The repository may be gone or access is currently being blocked or limited, but you can still update using the button below.
           {:else if errors?.length === 1 && Array.isArray(errors[0].message)}

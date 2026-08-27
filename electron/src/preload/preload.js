@@ -32,7 +32,7 @@ contextBridge.exposeInMainWorld('torrent', {
   onRequest: (callback) => ipcRenderer.on('torrent:onRequest', (event, updateVersion) => callback(updateVersion)),
   debug: (debug) => send('debug', debug),
   rescan: () => new Promise(resolve => {
-    once('rescan_done', resolve)
+    once('rescan_done', ({ missingCount, removedCount }) => resolve({ missingCount, removedCount }))
     send('rescan')
   }),
   scrape: (id, infoHashes) => new Promise(resolve => {

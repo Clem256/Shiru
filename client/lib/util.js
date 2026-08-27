@@ -143,6 +143,7 @@ export async function getInfoHash(input) {
  * @returns {object}
  */
 export function getStats(torrent, completed = false) {
+  const pieces = completed ? getPiecesFromBitfield(torrent?._bitfield, torrent?.info?.pieces ? torrent.info.pieces.length / 20 : 0) : getPieces(torrent)
   return {
     infoHash: torrent?.infoHash,
     name: torrent?.name,
@@ -151,6 +152,7 @@ export function getStats(torrent, completed = false) {
     staging: torrent?.staging,
     seeding: torrent?.seeding,
     progress: torrent?.progress,
+    downloaded: getDownloadedBytes(pieces, completed ? torrent?.info?.['piece length'] : torrent?.pieceLength, torrent?.length || torrent?.info?.length || (Array.isArray(torrent?.info?.files) ? torrent.info.files.reduce((sum, file) => sum + file.length, 0) : 0)),
     numSeeders: torrent?.wires?.filter(wire => wire.isSeeder).length || 0,
     totalSeeders: torrent?.seeders || 0,
     numLeechers: (torrent?.wires?.length - torrent?.wires?.filter(wire => wire.isSeeder).length) || 0,
@@ -163,7 +165,9 @@ export function getStats(torrent, completed = false) {
     ...(!torrent?.current && !torrent?.staging && !torrent?.seeding ? { incomplete: torrent?.incomplete || torrent?.progress < 1 } : {}),
     ...(torrent?.missing_pieces ? { missing_pieces: torrent.missing_pieces } : {}),
     eta: torrent?.timeRemaining,
-    ratio: torrent?.ratio || (torrent && getRatio(torrent, torrent?.length, torrent?.progress))
+    ratio: torrent?.ratio || (torrent && getRatio(torrent, torrent?.length, torrent?.progress)),
+    pieces,
+    cachedAt: torrent?.cachedAt ?? Date.now()
   }
 }
 
@@ -174,6 +178,49 @@ export function getStats(torrent, completed = false) {
  * @param {number} progress - Progress of the torrent.
  * @returns {number}
  */
-export function getRatio(cache, size, progress) {
+function getRatio(cache, size, progress) {
   return (cache?._uploaded || 0) / (((progress || 0) * (size || 0)) || size || 1)
+}
+
+/**
+ * Sums the exact byte length of every verified piece, accounting for the shorter final piece.
+ * @param {number[]|null} pieces - Piece states, where 2 means verified
+ * @param {number} pieceLength - Standard piece size in bytes
+ * @param {number} totalLength - Total torrent size in bytes
+ * @returns {number}
+ */
+function getDownloadedBytes(pieces, pieceLength, totalLength) {
+  if (!pieces?.length || !pieceLength || !totalLength) return 0
+  const lastPieceLength = totalLength - pieceLength * (pieces.length - 1)
+  return pieces.reduce((sum, state, index) => sum + (state === 2 ? (index === pieces.length - 1 ? lastPieceLength : pieceLength) : 0), 0)
+}
+
+/**
+ * Returns piece states (2=verified, 0=missing) from a stored bitfield, or null if absent.
+ * @param {Buffer|Uint8Array} bitfield
+ * @param {number} pieceCount
+ * @returns {number[]|null}
+ */
+function getPiecesFromBitfield(bitfield, pieceCount) {
+  if (!bitfield || !pieceCount) return null
+  const buffer = Buffer.isBuffer(bitfield) ? bitfield : Buffer.from(bitfield)
+  return Array.from({ length: pieceCount }, (_, index) => (buffer[index >> 3] >> (7 - (index & 7))) & 1 ? 2 : 0)
+}
+
+/**
+ * Returns piece states for an active torrent: 2 = verified, 1 = downloading, 0 = missing.
+ * @param {import('webtorrent').Torrent} torrent
+ * @returns {number[]|null}
+ */
+function getPieces(torrent) {
+  if (!torrent?.pieces?.length) return null
+  const downloading = new Set()
+  for (const wire of (torrent.wires || [])) {
+    for (const request of (wire.requests || [])) downloading.add(request.piece)
+  }
+  return torrent.pieces.map((piece, index) => {
+    if (piece === null) return 2
+    if (downloading.has(index)) return 1
+    return 0
+  })
 }

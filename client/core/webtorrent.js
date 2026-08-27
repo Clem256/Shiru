@@ -25,12 +25,12 @@ export default class TorrentClient extends WebTorrent {
   /**
    * Creates a new TorrentClient instance.
    * @param {any} ipc - Inter-process communication interface.
-   * @param {number} storageQuota - Maximum storage quota in bytes.
+   * @param {{total: number, free: number}} diskSpace - Disk space info (total and free bytes).
    * @param {string} serverMode - Server mode ('node', 'browser', etc.).
    * @param {object} settings - Torrent and network configuration settings.
    * @param {Promise<any>|null} controller - Optional server controller promise.
    */
-  constructor(ipc, storageQuota, serverMode, settings, controller) {
+  constructor(ipc, diskSpace, serverMode, settings, controller) {
     Debug.disable()
     if (settings.debug) Debug.enable(settings.debug)
     debug('Initializing TorrentClient with settings:', JSON.stringify(settings))
@@ -67,7 +67,7 @@ export default class TorrentClient extends WebTorrent {
     })
 
     this.serverMode = serverMode
-    this.storageQuota = storageQuota
+    this.diskSpace = diskSpace
     this.currentFile = null
 
     const statsInterval = setInterval(() => {
@@ -81,16 +81,21 @@ export default class TorrentClient extends WebTorrent {
     }, 200)
     this.intervals.push(statsInterval)
     statsInterval.unref?.()
-    const activityInterval = setInterval(() => {
+    const sendActivity = () => {
       if (this.destroyed) return
       const currentTorrent = this.torrents.find(torrent => torrent.current)
       if (currentTorrent?.pieces) this.dispatch('progress', this.currentFile?.progress)
-      this.dispatch('activity', {
-        current: getStats(currentTorrent),
-        staging: this.torrents.filter(torrent => torrent.staging).map(torrent => getStats(torrent)),
-        seeding: this.torrents.filter(torrent => torrent.seeding).map(torrent => getStats(torrent))
+      this.diskSpace(this.torrentPath || TMP).then(storage => {
+        this.dispatch('activity', {
+          storage,
+          current: getStats(currentTorrent),
+          staging: this.torrents.filter(torrent => torrent.staging).map(torrent => getStats(torrent)),
+          seeding: this.torrents.filter(torrent => torrent.seeding).map(torrent => getStats(torrent))
+        })
       })
-    }, 5_000)
+    }
+    sendActivity()
+    const activityInterval = setInterval(sendActivity, 5_000)
     this.intervals.push(activityInterval)
     activityInterval.unref?.()
 
@@ -238,6 +243,7 @@ export default class TorrentClient extends WebTorrent {
     torrent.current = current
     torrent.staging = !current
     torrent.date = new Date(Date.now() - 1_000).toUTCString()
+    torrent.cachedAt = cache?.cachedAt ?? Date.now()
     const uploadedOffset = cache?._uploaded ?? 0
     Object.defineProperty(torrent, 'ratio', { // reassign torrent.ratio to use our own getter for more accurate ratio tracking.
       configurable: true,
@@ -251,9 +257,6 @@ export default class TorrentClient extends WebTorrent {
     }, 30_000)
     this.timeouts.push(timeout)
     timeout.unref?.()
-    torrent.once('metadata', () => {
-      if (!rescan && torrent.staging && torrent.progress < 1 && !cache?.infoHash) this.dispatch('info', 'Torrent queued for background download. Check the management page for progress...')
-    })
     torrent.once('verified', async () => {
       if (this.destroyed || torrent.destroyed) return
       if (torrent.current && !torrent.ready && torrent.progress < 1 && !cache?.infoHash) this.dispatch('info', 'Detected already downloaded files. Verifying file integrity. This might take a minute...')
@@ -262,7 +265,7 @@ export default class TorrentClient extends WebTorrent {
           if (!file._destroyed) file.select()
         }
       }
-      if (!rescan && torrent.progress < 1 && (!this.settings.torrentStreamedDownload || torrent.staging) && (torrent.length > await this.storageQuota(torrent.path))) this.dispatchError('File Too Big! This File Exceeds The Selected Drive\'s Available Space. Change Download Location In Torrent Settings To A Drive With More Space And Restart The App!')
+      if (!rescan && torrent.progress < 1 && (!this.settings.torrentStreamedDownload || torrent.staging) && (torrent.length > (await this.diskSpace(torrent.path)).free)) this.dispatchError('File Too Big! This File Exceeds The Selected Drive\'s Available Space. Change Download Location In Torrent Settings To A Drive With More Space And Restart The App!')
     })
     if (!torrent.ready) await new Promise(resolve => torrent.once('ready', resolve))
 
@@ -414,7 +417,6 @@ export default class TorrentClient extends WebTorrent {
         this._scrape(data.data)
         break
       } case 'rescan': {
-        this.dispatch('info', 'Rescanning the torrent cache, this will take a moment...')
         const excludeHashes = new Set([...this.torrents.map(torrent => torrent.infoHash), ...(this.completed || []).map(torrent => torrent.infoHash)].filter(Boolean))
         const torrents = []
         for await (const torrent of this.torrentCache.entries()) {
@@ -446,8 +448,7 @@ export default class TorrentClient extends WebTorrent {
             await this.torrentCache.delete(torrent.name, this.torrentPath)
           }
         }
-        this.dispatch('rescan_done')
-        this.dispatch('info', `Rescan complete: ${missingCount} missing torrents found, ${removedCount} removed from cache.`)
+        this.dispatch('rescan_done', { missingCount, removedCount })
         break
       } case 'settings': {
         this.settings = { ...data.data }
@@ -482,7 +483,7 @@ export default class TorrentClient extends WebTorrent {
           this.metadata?.destroy?.()
           this.metadata = null
           found.select()
-          if (this.settings.torrentStreamedDownload && (found.length > await this.storageQuota(torrent.path))) this.dispatchError('File Too Big! This File Exceeds The Selected Drive\'s Available Space. Change Download Location In Torrent Settings To A Drive With More Space And Restart The App!')
+          if (this.settings.torrentStreamedDownload && (found.length > (await this.diskSpace(torrent.path)).free)) this.dispatchError('File Too Big! This File Exceeds The Selected Drive\'s Available Space. Change Download Location In Torrent Settings To A Drive With More Space And Restart The App!')
 
           if (this.settings.torrentStreamedDownload) {
             if (this._checkProgress) {

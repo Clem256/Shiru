@@ -259,5 +259,5 @@ export const toast = Object.assign(buildShorthand('default'), {
   }
 })
 
-/** @type {import('svelte/store').Writable<ToastData[]>} */
+/** @type {import('simple-store-svelte').Writable<ToastData[]>} */
 export const toasts = writable(/** @type {ToastData[]} */ ([]))

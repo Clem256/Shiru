@@ -36,5 +36,5 @@
 {:else if $page === page.WATCH_TOGETHER}
   <WatchTogetherPage />
 {:else if $page === page.TORRENT_MANAGER}
-  <TorrentPage />
+  <TorrentPage bind:statusTransition />
 {/if}

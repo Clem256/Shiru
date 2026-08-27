@@ -14,15 +14,49 @@ import { get } from 'svelte/store'
 import Debug from 'debug'
 const debug = Debug('ui:torrent')
 
+/**
+ * @typedef {object} Torrent
+ * @property {string} infoHash
+ * @property {string} name
+ * @property {number} size
+ * @property {boolean} [current]
+ * @property {boolean} [staging]
+ * @property {boolean} [seeding]
+ * @property {number} progress
+ * @property {number} downloaded
+ * @property {number} numSeeders
+ * @property {number} totalSeeders
+ * @property {number} numLeechers
+ * @property {number} totalLeechers
+ * @property {number} numPeers
+ * @property {number} downloadSpeed
+ * @property {number} uploadSpeed
+ * @property {string} magnetURI
+ * @property {string} date
+ * @property {boolean} [incomplete]
+ * @property {number[]} [missing_pieces]
+ * @property {number} eta
+ * @property {number} ratio
+ * @property {object[]} pieces
+ * @property {number} cachedAt
+ */
+
 const excludedToastMessages = ['no buffer space', 'localDescription']
 const torrentRx = /(^magnet:){1}|(^[A-F\d]{8,40}$){1}|(.*\.torrent$){1}/i
 let _settings
 
+/** @type {import('simple-store-svelte').Writable<boolean>} */
 export const loadingSession = writable(true)
+/** @type {import('simple-store-svelte').Writable<Torrent>} */
 export const loadedTorrent = writable({})
+/** @type {import('simple-store-svelte').Writable<Torrent[]>} */
 export const stagingTorrents = writable([])
+/** @type {import('simple-store-svelte').Writable<Torrent[]>} */
 export const seedingTorrents = writable([])
+/** @type {import('simple-store-svelte').Writable<Torrent[]>} */
 export const completedTorrents = writable([])
+/** @type {import('simple-store-svelte').Writable<{ total: number, free: number }>} */
+export const diskSpace = writable({ total: 0, free: 0 })
 
 clipboard.addEventListener('text', ({ detail }) => {
   for (const { text } of detail) {
@@ -73,6 +107,7 @@ TORRENT.portRequest(_settings).then(() => {
   })
 
   TORRENT.onStats(detail => {
+    diskSpace.update(() => detail.storage)
     loadedTorrent.update(() => ({ ...detail.current }))
     stagingTorrents.update(() => Array.from(new Map(detail.staging.map(torrent => [torrent.infoHash, torrent])).values()))
     seedingTorrents.update(() => Array.from(new Map(detail.seeding.map(torrent => [torrent.infoHash, torrent])).values()))

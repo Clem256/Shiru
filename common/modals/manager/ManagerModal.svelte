@@ -49,7 +49,7 @@
         autocomplete='off'
         spellcheck='false'
         data-option='search'
-        placeholder='Filter by file name or series title' bind:value={searchText} on:input={() => { container.scrollTo({top: 0}); }} />
+        placeholder='Filter by file name or series title' bind:value={searchText} on:input={() => { container.scrollTo({ top: 0 }); }} />
   </div>
   <div bind:this={container} class='overflow-y-auto mt-10 pb-20'>
     {#each filterResults(files?.filter((file) => file !== playing), searchText) as file, index}

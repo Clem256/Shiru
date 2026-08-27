@@ -7,7 +7,7 @@ const torrentDefaults = {
   onCrash: noopVoid,
   onRequest: noopVoid,
   debug: noopVoid,
-  rescan: noopAsyncVoid,
+  rescan: async () => ({ missingCount: 0, removedCount: 0 }),
   scrape: noopAsyncVoid,
   stream: noopVoid,
   stage: noopVoid,

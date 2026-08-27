@@ -1,9 +1,9 @@
 import { ipcRenderer } from 'electron'
 import { statfs } from 'fs/promises'
 
-async function storageQuota (directory) {
-  const { bsize, bavail } = await statfs(directory)
-  return bsize * bavail
+async function diskSpace(directory) {
+  const { bsize, blocks, bavail } = await statfs(directory)
+  return { total: bsize * blocks, free: bsize * bavail }
 }
 
 let heartbeatId
@@ -15,7 +15,7 @@ setHeartBeat()
 ipcRenderer.on('main-heartbeat', async (event, settings) => {
   clearInterval(heartbeatId)
   const { default: TorrentClient } = await import('webtorrent-client')
-  globalThis.client = new TorrentClient(ipcRenderer, storageQuota, 'node', settings)
+  globalThis.client = new TorrentClient(ipcRenderer, diskSpace, 'node', settings)
 })
 ipcRenderer.on('torrent:reload', async () => {
   globalThis.client?.destroy()

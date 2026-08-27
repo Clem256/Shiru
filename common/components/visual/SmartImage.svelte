@@ -1,8 +1,13 @@
 <script>
+  /** @type {(string|undefined)[]} */
   export let images = []
+  /** @type {boolean} */
   export let hidden = false
+  /** @type {string|null} */
   export let style = null
+  /** @type {string|null} */
   export let color = null
+  /** @type {string} */
   export let title = ''
 
   let index = 0
