@@ -241,18 +241,18 @@ export const toast = Object.assign(buildShorthand('default'), {
    * Ties a toast's lifecycle to a promise: shows a loading toast immediately, then flips it to success/error once it settles.
    *
    * @param {Promise} work
-   * @param {{ loading?: string, success?: string|((result: any) => string), error?: string|((error: any) => string), id?: string, position?: string }} [messages]
+   * @param {{ loading?: string, success?: string|((result: any) => string), error?: string|((error: any) => string), description?: string, id?: string, position?: string }} [messages]
    * @returns {Promise} resolves/rejects with the original promise's result, after updating the toast
    */
   promise: (work, messages = {}) => {
-    const id = show({ id: messages.id, position: messages.position, type: 'loading', title: messages.loading ?? 'Loading…', duration: Infinity })
+    const id = show({ id: messages.id, position: messages.position, type: 'loading', title: messages.loading ?? 'Loading…', description: messages.description, duration: Infinity })
     return work.then(
       (result) => {
-        update(id, { type: 'success', title: (typeof messages.success === 'function' ? messages.success(result) : messages.success) ?? 'Done', duration: DEFAULT_DURATION })
+        update(id, { type: 'success', title: (typeof messages.success === 'function' ? messages.success(result) : messages.success) ?? 'Done', description: messages.description, duration: DEFAULT_DURATION })
         return result
       },
       (error) => {
-        update(id, { type: 'error', title: (typeof messages.error === 'function' ? messages.error(error) : messages.error) ?? 'Something went wrong', duration: DEFAULT_DURATION })
+        update(id, { type: 'error', title: (typeof messages.error === 'function' ? messages.error(error) : messages.error) ?? 'Something went wrong', description: messages.description, duration: DEFAULT_DURATION })
         throw error
       }
     )
