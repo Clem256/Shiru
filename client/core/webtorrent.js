@@ -43,8 +43,7 @@ export default class TorrentClient extends WebTorrent {
       uploadLimit: settings.uploadLimit,
       torrentPort: settings.torrentPort,
       dhtPort: settings.dhtPort,
-      natUpnp: SUPPORTS.permamentNAT ? 'permanent' : true,
-      ...(SUPPORTS.isAndroid && { secure: 0 }) // Currently not supported on Android so we override with 0.
+      natUpnp: SUPPORTS.permamentNAT ? 'permanent' : true
     })
     this.settings = settings
     this.player = settings.playerPath
