@@ -44,10 +44,19 @@ export default class Cache {
    * @returns {Promise<void>}
    */
   async set(key, value, bencoded = true) {
+    const buffer = bencoded ? bencode.encode(value) : Buffer.from(JSON.stringify(value))
+    if (!buffer.length) return
+    const path = join(await this.cacheFolder, key)
     try {
-      return await writeFile(join(await this.cacheFolder, key), bencoded ? bencode.encode(value) : JSON.stringify(value), { mode: 0o666 })
+      await writeFile(path, buffer, { mode: 0o666, flag: 'r+' })
     } catch (error) {
-      console.debug(error)
+      if (error.code === 'ENOENT') {
+        try {
+          await writeFile(path, buffer, { mode: 0o666 })
+        } catch (error) {
+          console.debug(error)
+        }
+      } else console.debug(error)
     }
   }
 
