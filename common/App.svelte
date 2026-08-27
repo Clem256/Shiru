@@ -60,7 +60,7 @@
   <Sidebar />
   <Bottombar />
   <div class='overflow-hidden content-wrapper h-full' class:status-transition={$statusTransition}>
-    <Toaster position='top-right' max={5} hidden={isFullscreen && (!$modal || !modal.length)} />
+    <Toaster position='top-right' max={5} hidden={$page === page.PLAYER && isFullscreen && (!$modal || !modal.length)} />
     <DetailsModal />
     <TorrentModal />
     <NotificationModal />
