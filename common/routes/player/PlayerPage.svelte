@@ -649,17 +649,15 @@
   }
   function selectAudio (id) {
     if (id != null) {
-      for (const track of video.audioTracks) {
-        track.enabled = track.id === id
-      }
+      if (Array.from(video.audioTracks).find(track => track.enabled)?.id === id) return
+      for (const track of video.audioTracks) track.enabled = track.id === id
       seek(-0.2) // stupid fix because video freezes up when changing tracks
     }
   }
   function selectVideo (id) {
     if (id != null) {
-      for (const track of video.videoTracks) {
-        track.selected = track.id === id
-      }
+      if (Array.from(video.videoTracks).find(track => track.selected)?.id === id) return
+      for (const track of video.videoTracks) track.selected = track.id === id
       updateSubs()
     }
   }
