@@ -322,6 +322,17 @@ class HistoryManager {
         this.goForward()
       }
     })
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'BrowserBack' || (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.key === 'ArrowLeft')) {
+        event.preventDefault()
+        debug('Back navigation key pressed', event.key)
+        this.goBack()
+      } else if (event.key === 'BrowserForward' || (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey && event.key === 'ArrowRight')) {
+        event.preventDefault()
+        debug('Forward navigation key pressed', event.key)
+        this.goForward()
+      }
+    })
   }
 
   /**
