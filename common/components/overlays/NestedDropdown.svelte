@@ -180,10 +180,10 @@
       width: toRem(triggerClientRect.width),
       height: toRem(triggerClientRect.height)
     }
-    const spaceLeft = triggerRect.left - CARET_HEIGHT - CARET_GAP - panelWidthPadding
-    const spaceRight = viewportWidth - triggerRect.right - CARET_HEIGHT - CARET_GAP - panelWidthPadding
-    const spaceTopRaw = triggerRect.top - CARET_HEIGHT - CARET_GAP - panelHeightPadding
-    const spaceBottomRaw = viewportHeight - triggerRect.bottom - CARET_HEIGHT - CARET_GAP - panelHeightPadding
+    const spaceLeft = triggerRect.left - capLeft - CARET_HEIGHT - CARET_GAP - panelWidthPadding
+    const spaceRight = capRight - triggerRect.right - CARET_HEIGHT - CARET_GAP - panelWidthPadding
+    const spaceTopRaw = triggerRect.top - capTop - CARET_HEIGHT - CARET_GAP - panelHeightPadding
+    const spaceBottomRaw = capBottom - triggerRect.bottom - CARET_HEIGHT - CARET_GAP - panelHeightPadding
 
     let openLeft, openTop
     if (direction === 'left' || direction === 'right') {
@@ -200,7 +200,7 @@
 
       let left = openLeft ? triggerRect.left - renderPanelWidth - CARET_HEIGHT - CARET_GAP : triggerRect.right + CARET_HEIGHT + CARET_GAP
       let top = alignStart ? triggerRect.top : triggerRect.top + triggerRect.height / 2 - totalPanelHeight / 2
-      top = Math.max(capTop + panelHeightPadding, Math.min(top, viewportHeight - totalPanelHeight - panelHeightPadding))
+      top = Math.max(capTop + panelHeightPadding, Math.min(top, capBottom - totalPanelHeight - panelHeightPadding))
 
       const triggerCenterY = triggerRect.top + triggerRect.height / 2
       const caretY = Math.max(CARET_HEIGHT + .4, Math.min(triggerCenterY - top, totalPanelHeight - CARET_HEIGHT - .4))
@@ -226,7 +226,7 @@
 
       let top = openTop ? triggerRect.top - totalPanelHeight - CARET_HEIGHT - CARET_GAP : triggerRect.bottom + CARET_HEIGHT + CARET_GAP
       const triggerCenterX = triggerRect.left + triggerRect.width / 2
-      let left = Math.max(panelWidthPadding, Math.min(triggerCenterX - renderPanelWidth / 2, viewportWidth - renderPanelWidth - panelWidthPadding))
+      let left = Math.max(capLeft + panelWidthPadding, Math.min(triggerCenterX - renderPanelWidth / 2, capRight - renderPanelWidth - panelWidthPadding))
       const caretX = Math.max(CARET_HEIGHT + .4, Math.min(triggerCenterX - left, renderPanelWidth - CARET_HEIGHT - .4))
 
       const offsetParentRect = panelEl.offsetParent?.getBoundingClientRect() ?? { left: 0, top: 0 }
@@ -442,7 +442,7 @@
           {#each stack as panel, panelIndex (panelIndex)}
             <div class='nd-slide flex-shrink-0 mw-0' style='width: {renderPanelWidth}rem;' aria-hidden={panelIndex !== depth ? true : undefined}>
               <ul role='menu' class='nd-list overflow-y-auto overflow-x-hidden mw-0 py-5 m-0' class:sliding={isSliding}>
-                {#each filterItems(panel.items) as item, itemIndex (item.type === 'separator' ? `separator-${itemIndex}` : (item.label ?? `item-${itemIndex}`))}
+                {#each filterItems(panel.items) as item, itemIndex (item.type === 'separator' ? `separator-${itemIndex}` : `${item.label ?? 'item'}-${itemIndex}`)}
                   {#if item.type === 'separator'}
                     <li class='nd-separator my-5 mx-0' role='separator' />
                   {:else if item.type === 'input'}

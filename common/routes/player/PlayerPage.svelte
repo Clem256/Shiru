@@ -10,7 +10,7 @@
   import { durationMap, getMediaMaxEp } from '@/modules/anime/anime.js'
   import { createEventDispatcher } from 'svelte'
   import Subtitles from '@/modules/subtitles.js'
-  import { toTS, fastPrettyBytes, capitalize, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
+  import { toTS, fastPrettyBytes, matchPhrase, videoRx, isValidNumber, debounce } from '@/modules/util.js'
   import { toast } from '@/modules/lib/toast.js'
   import { getChaptersAniSkip } from '@/modules/anime/anime.js'
   import { mediaCache } from '@/modules/cache.js'
@@ -156,6 +156,27 @@
     subs.renderer.resize()
     if (delayChanged) subs.renderer._timeupdate({ type: 'seeking' })
   }, 200) // stupid fix (resize) because video metadata doesn't update for multiple frames
+  function setLastSubtitle(label) {
+    cache.setEntry(caches.HISTORY, 'lastSubtitle', { ...(cache.getEntry(caches.HISTORY, 'lastSubtitle') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: label })
+  }
+  function languageName(code) {
+    if (!code) return null
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'language' })
+    try {
+      return displayNames.of(code.toLowerCase()) ?? null
+    } catch {
+      return null
+    }
+  }
+  function trackLabel(track, index, allTracks, nameKey = 'name') {
+    const trackPosition = index + 1
+    const trackName = track?.[nameKey]
+    const languageLabel = languageName(track?.language)
+    return !languageLabel ? `Track ${trackPosition}` + (trackName ? ` (${trackName})` : '')
+      : trackName ? `${languageLabel} (${trackName})`
+      : allTracks.filter(other => !other?.[nameKey] && languageName(other?.language) === languageLabel).length > 1 ? `${languageLabel} (Track ${trackPosition})`
+      : languageLabel
+  }
   function checkSubtitle() {
     const lastSubtitle = cache.getEntry(caches.HISTORY, 'lastSubtitle')?.[`${media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name}`]
     if (subHeaders?.length && lastSubtitle) {
@@ -163,8 +184,9 @@
         subs.selectCaptions(-1)
         updateSubs()
       } else {
-        for (const track of subHeaders) {
-          const trackName = (track?.language || (!Object.values(subs?.headers).some(header => header?.language === 'eng' || header?.language === 'en') ? 'eng' : track?.type)) + (track?.name ? ' - ' + track?.name : '')
+        for (const [index, track] of subHeaders.entries()) {
+          if (!track) continue
+          const trackName = trackLabel(track, index, subHeaders)
           if (matchPhrase(lastSubtitle, trackName, trackName?.length > 10 ? 3 : 2, true) && track?.number) {
             subs.selectCaptions(track.number)
             updateSubs()
@@ -353,8 +375,10 @@
     if (current && subs?.headers) {
       const tracks = subs.headers.filter(header => header)
       const index = tracks.indexOf(subs.headers[subs.current]) + 1
-      subs.selectCaptions(index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index]))
+      const newIndex = index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index])
+      subs.selectCaptions(newIndex)
       updateSubs()
+      setLastSubtitle(newIndex === -1 ? 'OFF' : trackLabel(subs.headers[newIndex], newIndex, subs.headers))
     }
   }
 
@@ -2067,24 +2091,24 @@
         </span>
       {/if}
       {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1 && !externalPlayback}
-        <NestedDropdown title='Audio Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.audioTracks).map(track => ({
-            label: (track.language?.toUpperCase() || (!Object.values(video.audioTracks).some(_track => _track.language === 'eng' || _track.language === 'en') ? 'ENG' : track.label?.toUpperCase())) + (track.label ? ' (' + capitalize(track.label) + ')' : ''),
-            value: track.enabled ? '✓' : undefined,
-            valueCSS: 'text-primary font-size-18 font-weight-very-bold',
-            onSelect: () => selectAudio(track.id)
-          }))}>
+        <NestedDropdown title='Audio Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.audioTracks).map((track, index, allTracks) => ({
+          label: trackLabel(track, index, allTracks, 'label'),
+          value: track.enabled ? '✓' : undefined,
+          valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+          onSelect: () => selectAudio(track.id)
+        }))}>
           <span class='icon text-white ctrl d-flex align-items-center h-full' title='Audio Tracks'>
             <ListMusic size='2.5rem' strokeWidth={2.5} />
           </span>
         </NestedDropdown>
       {/if}
       {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1 && !externalPlayback}
-        <NestedDropdown title='Video Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.videoTracks).map(track => ({
-            label: (track.language?.toUpperCase() || (!Object.values(video.videoTracks).some(_track => _track.language === 'eng' || _track.language === 'en') ? 'ENG' : track.label?.toUpperCase())) + (track.label ? ' (' + capitalize(track.label) + ')' : ''),
-            value: track.selected ? '✓' : undefined,
-            valueCSS: 'text-primary font-size-18 font-weight-very-bold',
-            onSelect: () => selectVideo(track.id)
-          }))}>
+        <NestedDropdown title='Video Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.videoTracks).map((track, index, allTracks) => ({
+          label: trackLabel(track, index, allTracks, 'label'),
+          value: track.selected ? '✓' : undefined,
+          valueCSS: 'text-primary font-size-18 font-weight-very-bold',
+          onSelect: () => selectVideo(track.id)
+        }))}>
           <span class='icon text-white ctrl d-flex align-items-center h-full' title='Video Tracks'>
             <ListVideo size='2.5rem' strokeWidth={2.5} />
           </span>
@@ -2124,23 +2148,24 @@
               onSelect: () => {
                 subs.selectCaptions(-1)
                 updateSubs()
-                cache.setEntry(caches.HISTORY, 'lastSubtitle', { ...(cache.getEntry(caches.HISTORY, 'lastSubtitle') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: 'OFF' })
+                setLastSubtitle('OFF')
               }
             },
             { type: 'separator' },
-            ...subHeaders.filter(Boolean).map(track => {
-              const trackName = (track.language?.toUpperCase() || (!Object.values(subs.headers).some(header => header.language === 'eng' || header.language === 'en') ? 'ENG' : track.type?.toUpperCase())) + (track.name ? ' (' + capitalize(track.name) + ')' : '')
+            ...subHeaders.map((track, index) => {
+              if (!track) return null
+              const label = trackLabel(track, index, subHeaders)
               return {
-                label: trackName,
+                label,
                 value: track.number === subs.current ? '✓' : undefined,
                 valueCSS: 'text-primary font-size-18 font-weight-very-bold',
                 onSelect: () => {
                   subs.selectCaptions(track.number)
                   updateSubs()
-                  cache.setEntry(caches.HISTORY, 'lastSubtitle', { ...(cache.getEntry(caches.HISTORY, 'lastSubtitle') || {}), [media?.media?.id || media?.title || media?.parseObject?.title || media?.parseObject?.file_name]: trackName })
+                  setLastSubtitle(label)
                 }
               }
-            })
+            }).filter(Boolean)
           ]}>
           <span class='icon text-white ctrl d-flex align-items-center h-full' title='Subtitles [C]'>
             <Captions size='2.5rem' strokeWidth={2.5} />
