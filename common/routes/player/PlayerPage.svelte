@@ -168,8 +168,9 @@
       return null
     }
   }
-  function trackLabel(track, index, allTracks, nameKey = 'name') {
-    const trackPosition = index + 1
+  function trackLabel(track, allTracks, nameKey = 'name') {
+    const validTracks = allTracks.filter(Boolean)
+    const trackPosition = validTracks.indexOf(track) + 1
     const trackName = track?.[nameKey]
     const languageLabel = languageName(track?.language)
     return !languageLabel ? `Track ${trackPosition}` + (trackName ? ` (${trackName})` : '')
@@ -184,9 +185,9 @@
         subs.selectCaptions(-1)
         updateSubs()
       } else {
-        for (const [index, track] of subHeaders.entries()) {
+        for (const track of subHeaders) {
           if (!track) continue
-          const trackName = trackLabel(track, index, subHeaders)
+          const trackName = trackLabel(track, subHeaders)
           if (matchPhrase(lastSubtitle, trackName, trackName?.length > 10 ? 3 : 2, true) && track?.number) {
             subs.selectCaptions(track.number)
             updateSubs()
@@ -378,7 +379,7 @@
       const newIndex = index >= tracks.length ? -1 : subs.headers.indexOf(tracks[index])
       subs.selectCaptions(newIndex)
       updateSubs()
-      setLastSubtitle(newIndex === -1 ? 'OFF' : trackLabel(subs.headers[newIndex], newIndex, subs.headers))
+      setLastSubtitle(newIndex === -1 ? 'OFF' : trackLabel(subs.headers[newIndex], subs.headers))
     }
   }
 
@@ -2083,8 +2084,8 @@
         </span>
       {/if}
       {#if 'audioTracks' in HTMLVideoElement.prototype && video?.audioTracks?.length > 1 && !externalPlayback}
-        <NestedDropdown title='Audio Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.audioTracks).map((track, index, allTracks) => ({
-          label: trackLabel(track, index, allTracks, 'label'),
+        <NestedDropdown title='Audio Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.audioTracks).map((track, _, allTracks) => ({
+          label: trackLabel(track, allTracks, 'label'),
           value: track.enabled ? '✓' : undefined,
           valueCSS: 'text-primary font-size-18 font-weight-very-bold',
           onSelect: () => selectAudio(track.id)
@@ -2095,8 +2096,8 @@
         </NestedDropdown>
       {/if}
       {#if 'videoTracks' in HTMLVideoElement.prototype && video?.videoTracks?.length > 1 && !externalPlayback}
-        <NestedDropdown title='Video Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.videoTracks).map((track, index, allTracks) => ({
-          label: trackLabel(track, index, allTracks, 'label'),
+        <NestedDropdown title='Video Tracks' direction='top' panelWidth={25} panelHeightPadding={6} panelColor={'var(--dark-color-glass)'} containerEl={container} items={Object.values(video.videoTracks).map((track, _, allTracks) => ({
+          label: trackLabel(track, allTracks, 'label'),
           value: track.selected ? '✓' : undefined,
           valueCSS: 'text-primary font-size-18 font-weight-very-bold',
           onSelect: () => selectVideo(track.id)
@@ -2144,9 +2145,9 @@
               }
             },
             { type: 'separator' },
-            ...subHeaders.map((track, index) => {
+            ...subHeaders.map(track => {
               if (!track) return null
-              const label = trackLabel(track, index, subHeaders)
+              const label = trackLabel(track, subHeaders)
               return {
                 label,
                 value: track.number === subs.current ? '✓' : undefined,
