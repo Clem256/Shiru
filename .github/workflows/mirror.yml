@@ -14,8 +14,8 @@ jobs:
       - name: Push to GitLab
         run: |
           git remote add gitlab https://${{ secrets.GITLAB_USER }}:${{ secrets.GITLAB_TOKEN }}@gitlab.com/${{ secrets.GITLAB_USER }}/${{ secrets.GITLAB_REPO }}.git
-          git push gitlab --all
-          git push gitlab --tags
+          git push --force gitlab --all
+          git push --force gitlab --tags
 
   mirror-codeberg:
     runs-on: ubuntu-latest
@@ -26,5 +26,5 @@ jobs:
       - name: Push to Codeberg
         run: |
           git remote add codeberg https://${{ secrets.CODEBERG_USER }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ secrets.CODEBERG_USER }}/${{ secrets.CODEBERG_REPO }}.git
-          git push codeberg --all
-          git push codeberg --tags
+          git push --force codeberg --all
+          git push --force codeberg --tags
