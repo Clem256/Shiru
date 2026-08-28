@@ -19,6 +19,9 @@ const capacitorConfig = {
     filename: 'index.js'
   },
   mode,
+  optimization: {
+    concatenateModules: { commonjs: false }
+  },
   externals: {
     bridge: 'require("bridge")',
     'utp-native': 'require("utp-native")',

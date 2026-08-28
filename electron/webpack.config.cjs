@@ -16,6 +16,9 @@ module.exports = [
       filename: 'background.js'
     },
     mode,
+    optimization: {
+      concatenateModules: { commonjs: false }
+    },
     externals: {
       'utp-native': 'require("utp-native")',
       'fs-native-extensions': 'commonjs2 fs-native-extensions',
