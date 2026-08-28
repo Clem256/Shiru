@@ -989,11 +989,8 @@ export async function getKitsuMappings(anilistID) {
 
 let aniRateLimitPromise = null
 const aniLimiter = new Bottleneck({
-  reservoir: 200,
-  reservoirRefreshAmount: 200,
-  reservoirRefreshInterval: 30_000,
-  maxConcurrent: 20,
-  minTime: 10
+  maxConcurrent: 30,
+  minTime: 110
 })
 aniLimiter.on('failed', async (error) => {
   if (status.value === 'offline') throw new Error('Failed making request to api.ani.zip, network is offline... not retrying')
@@ -1015,16 +1012,16 @@ export async function getAniMappings(anilistID) {
   if (concurrentRequests.has(`ani-${anilistID}`)) return concurrentRequests.get(`ani-${anilistID}`)
   const requestPromise = aniLimiter.wrap(async () => {
     await aniRateLimitPromise
+    let res = {}
     try {
-      let res = {}
-      try {
-        res = await fetch(`https://api.ani.zip/mappings?anilist_id=${anilistID}`)
-      } catch (e) {
-        if (!res || res.status !== 404) throw e
-      }
-      if (!res.ok && (res.status === 429 || res.status >= 500)) {
-        throw res
-      }
+      res = await fetch(`https://api.ani.zip/mappings?anilist_id=${anilistID}`)
+    } catch (e) {
+      if (!res || res.status !== 404) throw e
+    }
+    if (!res.ok && (res.status === 429 || res.status >= 500)) {
+      throw res
+    }
+    try {
       let json = null
       try {
         json = await res.json()

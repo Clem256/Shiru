@@ -1,5 +1,4 @@
 import { codes, throttle, getRandomInt } from '@/modules/util.js'
-import { settings } from '@/modules/settings.js'
 import { toast } from '@/modules/lib/toast.js'
 import { writable } from 'simple-store-svelte'
 import Debug from 'debug'
