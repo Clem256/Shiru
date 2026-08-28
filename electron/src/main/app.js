@@ -1,15 +1,12 @@
 import { join } from 'node:path'
 import process from 'node:process'
 
-import { toXmlString } from 'powertoast'
 import { youtubeServer } from './youtube.js'
-import Jimp from 'jimp'
-import fs from 'fs'
 
 import { BrowserWindow, MessageChannelMain, Notification, Tray, Menu, nativeImage, app, dialog, ipcMain, powerMonitor, shell, session } from 'electron'
 import electronShutdownHandler from '@paymoapp/electron-shutdown-handler'
 
-import { development, getWindowState, saveWindowState, getDefaultBounds } from './util.js'
+import { development, timeouts, getImage, getWindowState, saveWindowState, getDefaultBounds, toXmlString } from './util.js'
 import Debug from './debugger.js'
 import Discord from './discord.js'
 import Protocol from './protocol.js'
@@ -21,7 +18,6 @@ export default class App {
   trayIcon = process.platform === 'darwin' ? nativeImage.createFromPath(join(__dirname, '/trayMacOSTemplate.png')) : this.icon
   trayNotifyIcon = nativeImage.createFromPath(join(__dirname, process.platform === 'darwin' ? '/trayNotifyMacOSTemplate.png' : process.platform === 'win32' ? '/icon_filled_notify.ico' : '/icon_filled_notify.png'))
 
-  timeouts = new Set()
   stateTimeout = null
 
   torrentLoad = null
@@ -61,7 +57,6 @@ export default class App {
   debug = new Debug()
   dialog = new Dialog(this.debug)
   tray = new Tray(this.trayIcon)
-  imageDir = join(app.getPath('userData'), 'Cache', 'Image_Data')
   close = false
   ready = false
   notifications = {}
@@ -134,14 +129,13 @@ export default class App {
 
     this.createTray()
 
-    fs.rmSync(this.imageDir, { recursive: true, force: true })
     ipcMain.on('electron:setUnreadCount', async (e, notificationCount) => this.setTrayIcon(notificationCount))
     ipcMain.on('common:notify', async (e, opts) => {
-      opts.icon = opts.icon ? ((await this.getImage(opts.id, opts.icon)) || this.icon) : this.icon
+      opts.icon = opts.icon ? ((await getImage(opts.id, opts.icon)) || this.icon) : this.icon
       let notification
       if (process.platform === 'win32') {
-        opts.heroImg &&= await this.getImage(opts.id, opts.heroImg, true)
-        opts.inlineImg &&= await this.getImage(opts.id, opts.inlineImg)
+        opts.heroImg &&= await getImage(opts.id, opts.heroImg, true)
+        opts.inlineImg &&= await getImage(opts.id, opts.inlineImg)
         notification = new Notification({ toastXml: toXmlString(opts) })
       } else {
         const simpleOpts = { title: opts.title, body: opts.message, icon: opts.icon }
@@ -293,11 +287,11 @@ export default class App {
     if (!crashed || ++this.webTorrentCrashes < 5) {
       if (crashed) {
         const timeout = setTimeout(() => {
-          this.timeouts.delete(timeout)
+          timeouts.delete(timeout)
           if (this.webTorrentCrashes < 5) this.webTorrentCrashes = 0
         }, 60_000)
         timeout.unref?.()
-        this.timeouts.add(timeout)
+        timeouts.add(timeout)
         try {
           if (this.webtorrentWindow && !this.webtorrentWindow.isDestroyed()) {
             this.webtorrentWindow.removeAllListeners('closed')
@@ -325,8 +319,8 @@ export default class App {
     this.mainWindow.hide()
     this.mainWindow.webContents?.closeDevTools?.()
     this.tray?.destroy()
-    for (const timeout of this.timeouts) clearTimeout(timeout)
-    this.timeouts.clear()
+    for (const timeout of timeouts) clearTimeout(timeout)
+    timeouts.clear()
     clearTimeout(this.stateTimeout)
     saveWindowState(this.mainWindow)
     youtubeServer?.close?.()
@@ -346,45 +340,6 @@ export default class App {
       }
     } catch {} // WebTorrent crashed... prevents hanging infinitely.
     if (!this.updater.install(forceRunAfter)) app.quit()
-  }
-
-  imageCache = new Map()
-  async getImage(id, url, wideScreen) {
-    const cacheKey = `${id}_${url}_${wideScreen}`
-    if (this.imageCache.has(cacheKey)) return this.imageCache.get(cacheKey)
-    const res = await fetch(url)
-    const arrayBuffer = await res.arrayBuffer()
-    const urlParts = url.split('/')
-    const baseName = urlParts[urlParts.length - 1].replace(/\.[^/.]+$/, '')
-    const extension = urlParts[urlParts.length - 1].split('.').pop()
-    const uniqueName = `${baseName}_${id}.${extension}`
-    const imagePath = join(this.imageDir, uniqueName)
-    const image = await Jimp.read(Buffer.from(arrayBuffer))
-    const { width, height } = image.bitmap
-    this.imageCache.set(cacheKey, imagePath)
-    if (wideScreen) {
-      let adjWidth, adjHeight
-      if (width / height > (16 / 9)) {
-        adjWidth = Math.floor(height * (16 / 9))
-        image.crop((width - adjWidth) / 2, 0, adjWidth, height)
-      } else {
-        adjHeight = Math.floor(width / (16 / 9))
-        image.crop(0, (height - adjHeight) / 2, width, adjHeight)
-      }
-      await image.resize(adjWidth || width, adjHeight || height, Jimp.RESIZE_BEZIER).writeAsync(imagePath)
-    } else {
-      const squareRatio = Math.min(width, height)
-      await image.crop((width - squareRatio) / 2, (height - squareRatio) / 2, squareRatio, squareRatio).resize(128, 128, Jimp.RESIZE_BEZIER).writeAsync(imagePath)
-    }
-    const timeout = setTimeout(() => {
-      this.timeouts.delete(timeout)
-      fs.unlink(imagePath, (error) => {
-        if (!error) this.imageCache.delete(cacheKey)
-      })
-    }, 90_000)
-    timeout.unref?.()
-    this.timeouts.add(timeout)
-    return imagePath
   }
 
   notificationCount = 0
