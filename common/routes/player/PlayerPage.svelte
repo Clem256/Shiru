@@ -1811,11 +1811,9 @@
     {/if}
     {#if !miniplayer || !miniplayerShelved}
       <div class='d-flex align-items-center position-relative' class:mb-50={!miniplayer} style='width: 100%;' title='Play/Pause'>
-        {#if hasLast}
-          <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `left: 5%` : `left: 15%`} title='Last' data-name='playPause' use:click={playLast}>
+          <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `left: 5%` : `left: 15%`} title='{hasLast ? `Last` : `No Previous Episode`}' data-name='playPause' disabled={!hasLast} class:not-allowed={!hasLast} class:text-very-muted={!hasLast} use:click={playLast}>
             <SkipBack size='3rem' fill='currentColor' />
           </span>
-        {/if}
           <span class='icon ctrl position-absolute rounded-10 text-white' data-name='playPause' style='left: 50%; margin-left: -3rem;' use:click={playPause}>
             {#if ended}
               <RotateCw size='3rem' />
@@ -1827,11 +1825,9 @@
               {/if}
             {/if}
           </span>
-        {#if hasNext}
-          <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `right: 5%` : `right: 15%`} title='Next' data-name='playPause' use:click={playNext}>
+          <span class='icon ctrl position-absolute rounded-10 text-white' style={externalPlayback ? `right: 5%` : `right: 15%`} title='{hasNext ? `Next` : `No Next Episode`}' data-name='playPause' disabled={!hasNext} class:not-allowed={!hasNext} class:text-very-muted={!hasNext} use:click={playNext}>
             <SkipForward size='3rem' fill='currentColor' />
           </span>
-        {/if}
       </div>
       <span aria-hidden='true' class='icon ctrl align-items-center w-150 mw-full ml-auto' class:hidden={externalPlayback} class:mb-50={!miniplayer} on:click={forward}><FastForward size='3rem' /></span>
       <div class='position-absolute bufferingDisplay' class:bufferingPos={SUPPORTS.isAndroid && !miniplayer}/>
@@ -1896,16 +1892,12 @@
           {/if}
         {/if}
       </span>
-      {#if hasLast}
-        <span class='icon ctrl m-5 d-btn text-white' title='Last [B]' use:click={playLast}>
-          <SkipBack size='2rem' fill='currentColor' />
-        </span>
-      {/if}
-      {#if hasNext}
-        <span class='icon ctrl m-5 d-btn text-white' title='Next [N]' use:click={playNext}>
-          <SkipForward size='2rem' fill='currentColor' />
-        </span>
-      {/if}
+      <button class='icon ctrl m-5 d-btn text-white bg-transparent border-0 no-scale' title='{hasLast ? `Last [B]` : `No Previous Episode`}' disabled={!hasLast} class:not-allowed={!hasLast} class:text-very-muted={!hasLast} use:click={playLast}>
+        <SkipBack size='2rem' fill='currentColor' />
+      </button>
+      <button class='icon ctrl m-5 d-btn text-white bg-transparent border-0 no-scale' title='{hasNext ? `Next [N]` : `No Next Episode`}' disabled={!hasNext} class:not-allowed={!hasNext} class:text-very-muted={!hasNext} use:click={playNext}>
+        <SkipForward size='2rem' fill='currentColor' />
+      </button>
       <div class='d-none w-auto volume' class:d-flex={!externalPlayback}>
         <span class='icon ctrl m-5 text-white' title='Mute [M]' data-name='toggleMute' use:click={toggleMute}>
           {#if muted}

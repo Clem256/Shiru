@@ -119,6 +119,8 @@
   --nonary-color: #F7931E !important;
   --quindenary-color: #FFB088 !important;
 
+  --lm-very-muted-text-color: hsla(var(--black-color-hsl), 0.3);
+  --dm-very-muted-text-color: hsla(var(--white-color-hsl), 0.3);
   --dark-color-glass: hsla(var(--dark-color-hsl), .8);
   --border-color-sp: hsla(var(--gray-color-dim-hsl), 0.2);
   --dm-input-border-color: none;
@@ -512,10 +514,6 @@ a[href]:active, button:not([disabled], .not-reactive):active, fieldset:not([disa
   z-index: 110 !important;
 }
 
-.text-dark-light {
-  color: var(--gray-color-light);
-}
-
 .custom-link {
     color: var(--tertiary-color);
     cursor: pointer;
@@ -537,7 +535,7 @@ a[href]:active, button:not([disabled], .not-reactive):active, fieldset:not([disa
   cursor: pointer;
 }
 .not-allowed {
-  cursor: not-allowed;
+  cursor: not-allowed !important;
 }
 .cursor-wait {
   cursor: wait !important;
@@ -702,6 +700,20 @@ body {
 
 .bg-black {
   background: var(--black-color);
+}
+
+
+.text-dark-light {
+  color: var(--gray-color-light);
+}
+
+.text-very-muted,
+body:not(.dark-mode) .text-very-muted-lm {
+  color: var(--lm-very-muted-text-color) !important;
+}
+.dark-mode .text-very-muted,
+.dark-mode .text-very-muted-dm {
+  color: var(--dm-very-muted-text-color) !important;
 }
 
 .text-octonary {
