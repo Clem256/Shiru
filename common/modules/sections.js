@@ -313,6 +313,72 @@ function createSections () {
         return SectionsManager.wrapResponse(res, perPage, undefined, background)
       }
     }, { userList: true, droppedList: true, disableHide: true, status_not }),
+    // user specific manga sections
+    createSection({ title: 'Reading List', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
+        const res = Helper.userMangaLists(variables).then(res => {
+          if (!res?.data && res?.errors) throw res.errors[0]
+          const mediaList = Helper.isAniAuth()
+              ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'CURRENT')?.entries
+              : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('CURRENT'))
+          if (!mediaList) return {}
+          return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
+        })
+        return SectionsManager.wrapResponse(res, perPage, 'MANGA', background)
+      }
+    }, { userList: true, disableHide: true, status_not }),
+
+    createSection({ title: 'Manga Planning List', sort: 'POPULARITY_DESC', format: [], hide: !Helper.isAuthorized(),
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
+        const res = Helper.userMangaLists(variables).then(res => {
+          if (!res?.data && res?.errors) throw res.errors[0]
+          const mediaList = Helper.isAniAuth()
+              ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'PLANNING')?.entries
+              : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('PLANNING'))
+          if (!mediaList) return {}
+          return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
+        })
+        return SectionsManager.wrapResponse(res, perPage, 'MANGA', background)
+      }
+    }, { userList: true, planningList: true, disableHide: true, status_not }),
+
+    createSection({ title: 'Completed Manga', sort: 'UPDATED_TIME_DESC', format: [], hide: !Helper.isAuthorized(),
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
+        const res = Helper.userMangaLists(variables).then(res => {
+          if (!res?.data && res?.errors) throw res.errors[0]
+          const mediaList = Helper.isAniAuth()
+              ? (res.data.MediaListCollection?.lists || []).find(({ status }) => status === 'COMPLETED')?.entries
+              : (res.data.MediaList || []).filter(({ node }) => node.my_list_status.status === Helper.statusMap('COMPLETED'))
+          if (!mediaList) return {}
+          return Helper.getPaginatedMediaList(page, perPage, variables, mediaList)
+        })
+        return SectionsManager.wrapResponse(res, perPage, 'MANGA', background)
+      }
+    }, { userList: true, completedList: true, disableHide: true, status_not }),
+    // manga discovery sections
+    createSection({ title: 'Trending Manga', sort: 'TRENDING_DESC', format: ['MANGA'] }, {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
+        const res = anilistClient.searchManga({
+          page,
+          perPage,
+          sort: 'TRENDING_DESC',
+          ...SectionsManager.sanitiseObject(variables)
+        })
+        return SectionsManager.wrapResponse(res, perPage, 'MANGA', background)
+      }
+    }, true),
+
+    createSection({ title: 'Popular Manga', sort: 'POPULARITY_DESC', format: ['MANGA'] }, {
+      load: (page = 1, perPage = 50, variables = {}, background = false) => {
+        const res = anilistClient.searchManga({
+          page,
+          perPage,
+          sort: 'POPULARITY_DESC',
+          ...SectionsManager.sanitiseObject(variables)
+        })
+        return SectionsManager.wrapResponse(res, perPage, 'MANGA', background)
+      }
+    }, true),
     // common, non-user specific sections
     createSection({ title: 'Popular This Season', sort: 'POPULARITY_DESC', format }, { season: currentSeason, year: currentYear, hideMyAnime: settings.value.hideMyAnime, hideStatus, status_not }, true),
     createSection({ title: 'Upcoming Next Season', sort: 'POPULARITY_DESC', format }, { season: seasons[(seasons.indexOf(currentSeason) + 1) % seasons.length], year: (currentYear + (currentSeason === 'FALL' ? 1 : 0)), hideMyAnime: settings.value.hideMyAnime, hideStatus, status: ['NOT_YET_RELEASED'], status_not: ['CANCELLED'] }),
@@ -348,6 +414,9 @@ const resolveData = async (data) => Promise.all(
 if (Helper.getUser()) {
   refreshSections(Helper.getClient().userLists, ['Dubbed Releases', 'Subbed Releases', 'Hentai Releases'], true)
   refreshSections(Helper.getClient().userLists, [continueWatching, 'Sequels You Missed', 'Stories You Missed', 'Planning List', 'Completed List', 'Paused List', 'Dropped List', 'Watching List', 'Rewatching List'])
+  if (Helper.getUser() && Helper.getClient()?.userMangaLists) {
+    refreshSections(Helper.getClient().userMangaLists, ['Reading List', 'Manga Planning List', 'Completed Manga'])
+  }
 }
 if (Helper.isMalAuth()) refreshSections(animeSchedule.subAiredLists, continueWatching) // When authorized with Anilist, this is already automatically handled.
 refreshSections(animeSchedule.dubAiredLists, continueWatching)

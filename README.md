@@ -137,43 +137,6 @@ All keybinds are fully customizable via drag-and-drop in the keybinds UI (`` ` `
 | `.` / `Shift+.` | Subtitle delay +0.1s / +1.0s       |
 | `` ` `` | Open keybinds editor               |
 
-## ⚙️ **Installation**
-
-### 🐧 **Linux Installation**:
-
-#### Arch:
-```bash
-paru -S shiru
-```
-
-Or if you use yay:
-
-```bash
-yay -S shiru
-```
-
-#### Debian/Ubuntu:
-1. 🔗 Download the `linux-Shiru-version.deb` from the [releases page](https://latest.shiru.app/).
-2. 📦 Install using the package manager:
-
-    ```bash
-    apt install linux-Shiru-*.deb
-    ```
-
----
-
-### 🖥️ Windows Installation:
-#### Option 1: 💨 Install via Winget
-For Windows 10 **1809** or later, or Windows 11:
-```bash
-winget install shiru
-```
-
-#### Option 2: 🔄 Installer or Portable Version
-1. 🔗 Download from the [releases page](https://latest.shiru.app/):
-   - **Installer:** `win-Shiru-vx.x.x-installer.exe`
-   - **Portable:** `win-Shiru-vx.x.x-portable.exe` *(No installation required, just run it)*
-
 ## 🔧 Building & Development
 
 Credit to [NoCrypt](https://github.com/NoCrypt) for doing the legwork on this.

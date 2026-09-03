@@ -59,6 +59,8 @@ seasonYear,
 format,
 status,
 episodes,
+chapters,
+volumes,
 duration,
 averageScore,
 genres,
@@ -168,10 +170,10 @@ class AnilistClient {
   rateLimitPromise = null
 
   #listPromise = Promise.resolve()
-
+  #mangaListPromise = Promise.resolve()
   /** @type {import('simple-store-svelte').Writable<ReturnType<AnilistClient['getUserLists']>>} */
   userLists = writable()
-
+  userMangaLists = writable()
   mutationQueue = new MutationQueue('syncQueueAni')
 
   userID = alToken
@@ -200,6 +202,7 @@ class AnilistClient {
     if (this.userID?.viewer?.data?.Viewer) {
       validateToken(this.userID.token) // Check if token is expired on startup.
       this.userLists.value = this.getUserLists({ sort: 'UPDATED_TIME_DESC'}, true)
+      this.userMangaLists.value = this.getUserMangaLists({sort: 'UPDATED_TIME_DESC'}, true)
       setTimeout(() => {
         this.getUserLists({ sort: 'UPDATED_TIME_DESC' }).then(updatedLists => {
           this.userLists.value = Promise.resolve(updatedLists) // no need to have userLists await the entire query process while we already have previous values, (it's awful to wait 15+ seconds for the query to succeed with large lists)
@@ -431,6 +434,47 @@ class AnilistClient {
     const query = /* js */` 
       query($id: Int, $sort: [MediaListSort]) {
         MediaListCollection(userId: $id, type: ANIME, sort: $sort, forceSingleCompletedList: true) {
+          lists {
+            status,
+            entries {
+              media {
+                ${queryObjects}${settings.value.queryComplexity === 'Complex' ? `, ${queryComplexObjects}` : ``}
+              }
+            }
+          }
+        }
+      }`
+    let res
+    for (let attempt = 1; attempt <= 3; attempt++) { // VERY large user lists can sometimes result in a timeout, typically trying again succeeds.
+      res = await this.alRequest(query, variables)
+      if (res?.data?.MediaListCollection) break
+      if (attempt < 3) { // stupid fix... probably could be improved...
+        debug(`Error fetching user lists, attempt ${attempt} failed. Retrying in 5 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 5_000).unref?.())
+      } else {
+        debug('Failed fetching user lists. Maximum of 3 attempts reached, giving up.')
+      }
+    }
+
+    const result = await cache.cacheEntry(caches.USER_LISTS, JSON.stringify(variables), variables, res, Date.now() + 14 * 60 * 1_000) // expire after 14 minutes as this will be re-cached by our 15-minute interval.
+    this.mutationQueue.isFetchingList = false
+    return this.sortListEntries(userSort, result)
+  }
+
+  /** @returns {Promise<import('./al.d.ts').Query<{ MediaListCollection: import('./al.d.ts').MediaListCollection }>>} */
+  async getUserMangaLists(variables = {}, ignoreExpiry = false, ignoreCache = false) {
+    debug('Getting user manga lists')
+    await this.#mangaListPromise
+    variables.id = variables.userID || this.userID?.viewer?.data?.Viewer?.id
+    const userSort = variables.sort || 'UPDATED_TIME_DESC'
+    if (!variables.sort || Helper.isUserSort(variables)) variables.sort = 'UPDATED_TIME_DESC'
+    const cachedEntry = !ignoreCache && this.sortListEntries(userSort, await cache.cachedEntry(caches.USER_MANGA_LISTS, JSON.stringify(variables), ignoreExpiry || status.value.match(/offline/i)))
+    if (cachedEntry) return cachedEntry
+
+    this.mutationQueue.isFetchingList = true
+    const query = /* js */` 
+      query($id: Int, $sort: [MediaListSort]) {
+        MediaListCollection(userId: $id, type: MANGA, sort: $sort, forceSingleCompletedList: true) {
           lists {
             status,
             entries {
@@ -709,6 +753,39 @@ class AnilistClient {
       }
     }`
 
+
+    const request = (async () => {
+      try {
+        return await this.alRequest(query, variables)
+      } catch {
+        return this.fallbackSearch(variables)
+      }
+    })()
+
+    return cache.cacheEntry(caches.QUERY_SEARCH, JSON.stringify(variables), { ...variables, ...(malClient.userID ? { fillLists: malClient.userLists.value } : {}) }, request, Date.now() + getRandomInt(75, 100) * 60 * 1_000)
+  }
+
+  searchManga(variables = {}) {
+    if (settings.value.adult === 'none') variables.isAdult = false
+    if (settings.value.adult !== 'hentai' && (!variables.genre_not || !variables.genre_not.includes('Hentai'))) variables.genre_not = [ ...(variables.genre_not ? variables.genre_not : []), 'Hentai' ]
+    if (variables.search) variables.search = normalizeASCII(variables.search) // stupid fix because AniList search sucks.
+
+    debug(`Searching ${JSON.stringify(variables)}`)
+    const cachedEntry = cache.cachedEntry(caches.QUERY_SEARCH, JSON.stringify(variables), status.value.match(/offline/i))
+    if (cachedEntry) return cachedEntry
+    const query = /* js */` 
+    query($page: Int, $perPage: Int, $sort: [MediaSort], $search: String, $onList: Boolean, $status: [MediaStatus], $status_not: [MediaStatus], $season: MediaSeason, $year: Int, $genre: [String], $genre_not: [String], $tag: [String], $tag_not: [String], $format: [MediaFormat], $format_not: [MediaFormat], $id_not: [Int], $idMal_not: [Int], $id: [Int], $idMal: [Int], $isAdult: Boolean) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo {
+          hasNextPage
+        },
+        media(id_not_in: $id_not, idMal_not_in: $idMal_not, id_in: $id, idMal_in: $idMal, type: MANGA, search: $search, sort: $sort, onList: $onList, status_in: $status, status_not_in: $status_not, genre_in: $genre, genre_not_in: $genre_not, tag_in: $tag, tag_not_in: $tag_not, format_in: $format, format_not: MUSIC, format_not_in: $format_not, isAdult: $isAdult) {
+          ${queryObjects}${settings.value.queryComplexity === 'Complex' ? `, ${queryComplexObjects}` : ``}
+        }
+      }
+    }`
+
+
     const request = (async () => {
       try {
         return await this.alRequest(query, variables)
@@ -728,6 +805,29 @@ class AnilistClient {
     const query = /* js */` 
     query($id: Int, $idMal: Int) { 
       Media(id: $id, idMal: $idMal, type: ANIME) {
+        ${queryObjects}${settings.value.queryComplexity === 'Complex' ? `, ${queryComplexObjects}` : ``}
+      }
+    }`
+
+    const request = (async () => {
+      try {
+        return await this.alRequest(query, variables)
+      } catch {
+        return this.fallbackSearch(variables, true)
+      }
+    })()
+
+    return cache.cacheEntry(caches.QUERY_SEARCH_IDS, JSON.stringify(variables), { ...variables, ...(malClient.userID ? { fillLists: malClient.userLists.value } : {}) }, request, Date.now() + getRandomInt(80, 100) * 60 * 1_000)
+  }
+
+  searchMangaIDSingle(variables) {
+    variables.sort = variables.sort || 'OMIT'
+    debug(`Searching for ID: ${variables?.id || variables?.idMal}`)
+    const cachedEntry = cache.cachedEntry(caches.QUERY_SEARCH_IDS, JSON.stringify(variables), status.value.match(/offline/i))
+    if (cachedEntry) return cachedEntry
+    const query = /* js */` 
+    query($id: Int, $idMal: Int) { 
+      Media(id: $id, idMal: $idMal, type: MANGA) {
         ${queryObjects}${settings.value.queryComplexity === 'Complex' ? `, ${queryComplexObjects}` : ``}
       }
     }`

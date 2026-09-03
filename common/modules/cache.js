@@ -11,7 +11,7 @@ const SHARED_DB_NAME = 'shiru-shared'
 /** @type {Map<string, Promise<IDBDatabase>>} */
 const openDBs = new Map()
 /** @type {number} */
-const version = 2 // DONT TOUCH THIS
+const version = 3 // DONT TOUCH THIS
 /** @type {import('simple-store-svelte').Writable<string|null>} */
 export const migrationStatus = writable(null)
 
@@ -58,6 +58,7 @@ export const caches = Object.freeze({
   // USER DB
   GENERAL: { key: 'general' },
   USER_LISTS: { key: 'user_lists' },
+  USER_MANGA_LISTS: { key: 'user_manga_lists' },
   HISTORY: { key: 'history' },
   NOTIFICATIONS: { key: 'notifications' },
   QUERY_NOTIFICATIONS: { key: 'query_notifications' },
@@ -71,6 +72,7 @@ export const caches = Object.freeze({
   QUERY_EPISODES: { key: 'query_episodes', shared: true, expiryOffset: 60 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 60 days.
   QUERY_SEARCH_IDS: { key: 'query_search_ids', shared: true, expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
   QUERY_SEARCH: { key: 'query_search', shared: true, expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
+  QUERY_MANGA_SEARCH: { key: 'query_manga_search', shared: true, expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 },
   QUERY_RSS: { key: 'query_rss', shared: true, expiryOffset: 30 * 24 * 60 * 60 * 1_000, maxEntries: 1_000 }, // evict after 30 days.
 })
 
@@ -445,6 +447,8 @@ class Cache {
   /** @type {import('simple-store-svelte').Writable<any>} */
   user_lists
   /** @type {import('simple-store-svelte').Writable<any>} */
+  user_manga_lists
+  /** @type {import('simple-store-svelte').Writable<any>} */
   history
   /** @type {import('simple-store-svelte').Writable<NotifyDefaults>} */
   notifications
@@ -466,6 +470,8 @@ class Cache {
   query_rss
   /** @type {import('simple-store-svelte').Writable<any>} */
   query_search
+  /** @type {import('simple-store-svelte').Writable<any>} */
+  query_manga_search
   /** @type {import('simple-store-svelte').Writable<any>} */
   query_search_ids
   /** @type {Map<string, any>} */
@@ -647,6 +653,7 @@ class Cache {
       // USER DB
       { key: caches.GENERAL, writable: (data) => this.general = writable({ ...generalDefaults, ...deepClone(data) }) },
       { key: caches.USER_LISTS, writable: (data) => this.user_lists = writable(deepClone(data)) },
+      { key: caches.USER_MANGA_LISTS, writable: (data) => this.user_manga_lists = writable(deepClone(data)) },
       { key: caches.HISTORY, writable: (data) => this.history = writable({ ...historyDefaults, ...deepClone(data) }) },
       { key: caches.NOTIFICATIONS, writable: (data) => this.notifications = writable({ ...notifyDefaults, ...deepClone(data) }) },
       { key: caches.QUERY_NOTIFICATIONS, writable: (data) => this.query_notifications = writable(deepClone(data)) },
@@ -660,6 +667,7 @@ class Cache {
       { key: caches.QUERY_EPISODES, writable: (data) => this.query_episodes = writable(deepClone(data)) },
       { key: caches.QUERY_SEARCH_IDS, writable: (data) => this.query_search_ids = writable(deepClone(data)) },
       { key: caches.QUERY_SEARCH, writable: (data) => this.query_search = writable(deepClone(data)) },
+      { key: caches.QUERY_MANGA_SEARCH, writable: (data) => this.query_manga_search = writable(deepClone(data)) },
       { key: caches.QUERY_RSS, writable: (data) => this.query_rss = writable(deepClone(data)) }
     ]
 
@@ -806,6 +814,8 @@ class Cache {
     this.query_search_ids = null
     this.query_search = null
     this.query_rss = null
+    this.user_manga_lists = null
+    this.query_manga_search = null
     mediaCache = null
     debug(`Cache with ID ${this.cacheID} has been destroyed.`)
   }
@@ -891,6 +901,7 @@ class Cache {
     await reset(this.#getDatabase(caches.USER_LISTS), caches.USER_LISTS)
     await reset(this.#getDatabase(caches.QUERY_COMPOUND), caches.QUERY_COMPOUND)
     await reset(this.#getDatabase(caches.QUERY_EPISODES), caches.QUERY_EPISODES)
+    await reset(this.#getDatabase(caches.QUERY_MANGA_SEARCH), caches.QUERY_MANGA_SEARCH)
     await reset(this.#getDatabase(caches.QUERY_FOLLOWING), caches.QUERY_FOLLOWING)
     await reset(this.#getDatabase(caches.QUERY_RECOMMENDATIONS), caches.QUERY_RECOMMENDATIONS)
     await reset(this.#getDatabase(caches.QUERY_SEARCH_IDS), caches.QUERY_SEARCH_IDS)

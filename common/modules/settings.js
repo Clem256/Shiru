@@ -38,7 +38,12 @@ try {
 
 function setDefaults() {
   scopedDefaults = {
-    homeSections: [...(storedSettings.rssFeedsNew || defaults.rssFeedsNew).map(([title]) => [title, ['N/A'], ['N/A']]), ...(storedSettings.customSections || defaults.customSections).map(([title]) => [title, 'TRENDING_DESC', ['TV', 'MOVIE']]), ['Subbed Releases', 'N/A', ['TV', 'MOVIE', 'OVA', 'ONA']], ['Dubbed Releases', 'N/A', ['TV', 'MOVIE', 'OVA', 'ONA']], ['Continue Watching', 'UPDATED_TIME_DESC',  []], ['Sequels You Missed', 'POPULARITY_DESC',  []], ['Planning List', 'POPULARITY_DESC',  []], ['Popular This Season', 'N/A', ['TV', 'MOVIE']], ['Trending Now', 'N/A', ['TV', 'MOVIE']], ['All Time Popular', 'N/A', ['TV', 'MOVIE']]]
+    homeSections: [...(storedSettings.rssFeedsNew || defaults.rssFeedsNew).map(([title]) => [title, ['N/A'], ['N/A']]), ...(storedSettings.customSections || defaults.customSections).map(([title]) => [title, 'TRENDING_DESC', ['TV', 'MOVIE']]), ['Subbed Releases', 'N/A', ['TV', 'MOVIE', 'OVA', 'ONA']], ['Dubbed Releases', 'N/A', ['TV', 'MOVIE', 'OVA', 'ONA']], ['Continue Watching', 'UPDATED_TIME_DESC',  []], ['Sequels You Missed', 'POPULARITY_DESC',  []], ['Planning List', 'POPULARITY_DESC',  []], ['Popular This Season', 'N/A', ['TV', 'MOVIE']], ['Trending Now', 'N/A', ['TV', 'MOVIE']], ['All Time Popular', 'N/A', ['TV', 'MOVIE']],['Reading List', 'UPDATED_TIME_DESC', []],
+      ['Manga Planning List', 'POPULARITY_DESC', []],
+      ['Completed Manga', 'UPDATED_TIME_DESC', []],
+      ['Trending Manga', 'N/A', ['MANGA']],
+      ['Popular Manga', 'N/A', ['MANGA']]
+    ]
   }
 }
 

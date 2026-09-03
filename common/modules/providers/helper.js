@@ -111,6 +111,12 @@ export default class Helper {
         : this.getClient().getUserLists({sort: (this.isAniAuth() ? variables.sort : this.sortMap(variables.sort))})
   }
 
+  static userMangaLists(variables) {
+    return anilistClient.getUserMangaLists({ sort: variables.sort || 'UPDATED_TIME_DESC' })
+        ? this.getClient().userLists.value
+        : this.getClient().getUserLists({sort: (this.isAniAuth() ? variables.sort : this.sortMap(variables.sort))})
+  }
+
   static async entry(media, variables) {
     let res
     const isRepeating = media?.mediaListEntry?.status === 'REPEATING'
