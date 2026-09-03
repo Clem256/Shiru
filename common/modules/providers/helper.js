@@ -111,10 +111,12 @@ export default class Helper {
         : this.getClient().getUserLists({sort: (this.isAniAuth() ? variables.sort : this.sortMap(variables.sort))})
   }
 
-  static userMangaLists(variables) {
-    return anilistClient.getUserMangaLists({ sort: variables.sort || 'UPDATED_TIME_DESC' })
-        ? this.getClient().userLists.value
-        : this.getClient().getUserLists({sort: (this.isAniAuth() ? variables.sort : this.sortMap(variables.sort))})
+  static userMangaLists(variables = {}) {
+    const sort = this.isAniAuth() ? variables.sort : this.sortMap(variables.sort)
+
+    return (!this.isUserSort(variables) || variables.sort === 'UPDATED_TIME_DESC')
+        ? this.getClient().userMangaLists.value
+        : this.getClient().getUserMangaLists({ sort })
   }
 
   static async entry(media, variables) {
