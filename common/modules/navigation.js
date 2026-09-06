@@ -23,6 +23,8 @@ export const drawerOpen = writable(false)
  * @property {string} PLAYER
  * @property {string} TORRENT_MANAGER
  * @property {string} WATCH_TOGETHER
+ * @property {string} MY_ANIME
+ * @property {string} MY_MANGA
  */
 
 /**
@@ -67,7 +69,9 @@ export const page = (() => {
     SETTINGS: 'settings',
     PLAYER: 'player',
     TORRENT_MANAGER: 'torrent_manager',
-    WATCH_TOGETHER: 'watch_together'
+    WATCH_TOGETHER: 'watch_together',
+    MY_ANIME: 'my_anime',
+    MY_MANGA: 'my_manga'
   }
   return {
     set,
