@@ -38,6 +38,7 @@
   }
 
   $: isManga = staticMedia?.type === 'MANGA' || ['MANGA', 'NOVEL', 'ONE_SHOT'].includes(staticMedia?.format)
+  $: isNovel = staticMedia?.format === 'NOVEL'
 
   $: episodeOrder = !staticMedia
   $: watched = media?.mediaListEntry?.status === 'COMPLETED'
@@ -75,7 +76,7 @@
   function getActionText (media, mangaMode) {
     const entry = media?.mediaListEntry
     if (mangaMode) {
-      if (entry?.progress) {
+      if (entry?.progress || entry?.progressVolumes) {
         return entry.status === 'COMPLETED' ? 'Reread Now' : 'Continue Reading'
       }
       return 'Read Now'
@@ -347,110 +348,134 @@
 
       <div class='col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20' bind:this={rightColumn}>
         {#if isManga}
-          {@const knownChapters = staticMedia.chapters || 0}
-          {@const currentProgress = media?.mediaListEntry?.progress || 0}
-          {@const displayCount = knownChapters > 0 ? knownChapters : Math.max(currentProgress + 10, 30)}
+          {@const unitLabel = isNovel ? 'Volumes' : 'Chapters'}
+          {@const unitTag = isNovel ? 'VOL' : 'CH'}
+          {@const knownUnits = isNovel ? (staticMedia.volumes || 0) : (staticMedia.chapters || (staticMedia.volumes && !staticMedia.chapters ? staticMedia.volumes : 0))}
+          {@const currentProgress = isNovel ? (media?.mediaListEntry?.progressVolumes || 0) : (media?.mediaListEntry?.progress || 0)}
+          {@const displayCount = knownUnits > 0 ? knownUnits : currentProgress > 0 ? currentProgress : null}
 
           <div class='p-20 bg-dark-light rounded h-full d-flex flex-column' style='min-height: 0; max-height: 100%;'>
             <div class='d-flex align-items-center justify-content-between mb-15 flex-shrink-0'>
               <div class='d-flex align-items-center'>
-                <BookOpen class='mr-10 text-primary' size='2rem' />
-                <h3 class='font-size-18 font-weight-bold text-white m-0'>Chapters</h3>
+                {#if isNovel}
+                  <Bookmark class='mr-10 text-primary' size='2rem' />
+                {:else}
+                  <BookOpen class='mr-10 text-primary' size='2rem' />
+                {/if}
+                <h3 class='font-size-18 font-weight-bold text-white m-0'>{unitLabel}</h3>
               </div>
               <div class='d-flex align-items-center' style='gap: 0.8rem;'>
-        <span class='text-muted font-size-14'>
-          Read: <b class='text-white'>{currentProgress}</b> / {knownChapters || '?'}
-        </span>
+                <span class='text-muted font-size-14'>
+                  Read: <b class='text-white'>{currentProgress}</b> / {knownUnits || '?'}
+                </span>
                 <button
                         type='button'
                         class='btn btn-sm btn-primary px-10 py-0 font-weight-bold'
-                        title='Quick +1 chapter'
+                        title={`Quick +1 ${isNovel ? 'volume' : 'chapter'}`}
                         use:click={async () => {
-            const nextChap = currentProgress + 1
-            const isFinished = knownChapters > 0 && nextChap >= knownChapters
-            const nextStatus = isFinished ? 'COMPLETED' : 'CURRENT'
+                    const nextVal = currentProgress + 1
+                    const isFinished = knownUnits > 0 && nextVal >= knownUnits
+                    const nextStatus = isFinished ? 'COMPLETED' : 'CURRENT'
 
-            if (Helper.isAniAuth()) {
-              await anilistClient.entry({
-                mediaId: staticMedia.id,
-                progress: nextChap,
-                status: nextStatus
-              })
-            } else if (Helper.isMalAuth()) {
-              await Helper.getClient().entry({
-                id: staticMedia.id,
-                num_chapters_read: nextChap,
-                status: isFinished ? 'completed' : 'reading'
-              })
-            }
+                    if (Helper.isAniAuth()) {
+                      await anilistClient.entry({
+                        mediaId: staticMedia.id,
+                        ...(isNovel ? { progressVolumes: nextVal } : { progress: nextVal }),
+                        status: nextStatus
+                      })
+                    } else if (Helper.isMalAuth()) {
+                      await Helper.getClient().entry({
+                        id: staticMedia.id,
+                        ...(isNovel ? { num_volumes_read: nextVal } : { num_chapters_read: nextVal }),
+                        status: isFinished ? 'completed' : 'reading'
+                      })
+                    }
 
-            mediaCache.update(cache => {
-              const current = cache[staticMedia.id] || staticMedia
-              return {
-                ...cache,
-                [staticMedia.id]: {
-                  ...current,
-                  mediaListEntry: {
-                    ...(current.mediaListEntry || {}),
-                    progress: nextChap,
-                    status: nextStatus
-                  }
-                }
-              }
-            })
-          }}>
+                    mediaCache.update(cache => {
+                      const current = cache[staticMedia.id] || staticMedia
+                      return {
+                        ...cache,
+                        [staticMedia.id]: {
+                          ...current,
+                          mediaListEntry: {
+                            ...(current.mediaListEntry || {}),
+                            ...(isNovel ? { progressVolumes: nextVal } : { progress: nextVal }),
+                            status: nextStatus
+                          }
+                        }
+                      }
+                    })
+                  }}>
                   +1
                 </button>
               </div>
             </div>
 
             <div class='chapters-scroll-area flex-grow-1 overflow-y-auto pr-5'>
-              <div class='chapters-grid'>
-                {#each Array.from({ length: displayCount }, (_, i) => i + 1) as chapNum}
-                  {@const isRead = chapNum <= currentProgress}
-                  <button
-                          type='button'
-                          class='btn chapter-btn d-flex flex-column align-items-center justify-content-center border-0'
-                          class:read={isRead}
-                          class:current={chapNum === currentProgress + 1}
-                          use:click={async () => {
-              const isFinished = knownChapters > 0 && chapNum === knownChapters
-              const nextStatus = isFinished ? 'COMPLETED' : 'CURRENT'
+              {#if displayCount}
+                <div class='chapters-grid'>
+                  {#each Array.from({ length: displayCount }, (_, i) => i + 1) as unitNum}
+                    {@const isRead = unitNum <= currentProgress}
+                    <button
+                            type='button'
+                            class='btn chapter-btn d-flex flex-column align-items-center justify-content-center border-0'
+                            class:read={isRead}
+                            class:current={unitNum === currentProgress + 1}
+                            use:click={async () => {
+                        const isFinished = knownUnits > 0 && unitNum === knownUnits
+                        const nextStatus = isFinished ? 'COMPLETED' : 'CURRENT'
 
-              if (Helper.isAniAuth()) {
-                await anilistClient.entry({
-                  mediaId: staticMedia.id,
-                  progress: chapNum,
-                  status: nextStatus
-                })
-              } else if (Helper.isMalAuth()) {
-                await Helper.getClient().entry({
-                  id: staticMedia.id,
-                  num_chapters_read: chapNum,
-                  status: isFinished ? 'completed' : 'reading'
-                })
-              }
+                        if (Helper.isAniAuth()) {
+                          await anilistClient.entry({
+                            mediaId: staticMedia.id,
+                            ...(isNovel ? { progressVolumes: unitNum } : { progress: unitNum }),
+                            status: nextStatus
+                          })
+                        } else if (Helper.isMalAuth()) {
+                          await Helper.getClient().entry({
+                            id: staticMedia.id,
+                            ...(isNovel ? { num_volumes_read: unitNum } : { num_chapters_read: unitNum }),
+                            status: isFinished ? 'completed' : 'reading'
+                          })
+                        }
 
-              mediaCache.update(cache => {
-                const current = cache[staticMedia.id] || staticMedia
-                return {
-                  ...cache,
-                  [staticMedia.id]: {
-                    ...current,
-                    mediaListEntry: {
-                      ...(current.mediaListEntry || {}),
-                      progress: chapNum,
-                      status: nextStatus
-                    }
-                  }
-                }
-              })
-            }}>
-                    <span class='chap-label'>CH</span>
-                    <span class='chap-number'>{chapNum}</span>
-                  </button>
-                {/each}
-              </div>
+                        mediaCache.update(cache => {
+                          const current = cache[staticMedia.id] || staticMedia
+                          return {
+                            ...cache,
+                            [staticMedia.id]: {
+                              ...current,
+                              mediaListEntry: {
+                                ...(current.mediaListEntry || {}),
+                                ...(isNovel ? { progressVolumes: unitNum } : { progress: unitNum }),
+                                status: nextStatus
+                              }
+                            }
+                          }
+                        })
+                      }}>
+                      <span class='chap-label'>{unitTag}</span>
+                      <span class='chap-number'>{unitNum}</span>
+                    </button>
+                  {/each}
+                </div>
+              {:else}
+                <div class='d-flex flex-column align-items-center justify-content-center h-full py-40 text-center'>
+                  <div class='mb-15' style='opacity: 0.35;'>
+                    {#if isNovel}
+                      <Bookmark size='3.5rem' />
+                    {:else}
+                      <BookOpen size='3.5rem' />
+                    {/if}
+                  </div>
+                  <p class='text-muted font-size-14 m-0'>
+                    {isNovel ? 'Volume' : 'Chapter'} count unknown on AniList
+                  </p>
+                  <p class='text-muted font-size-12 mt-5 m-0'>
+                    Use +1 to start tracking your progress
+                  </p>
+                </div>
+              {/if}
             </div>
 
             <div class='pt-15 mt-10 border-top flex-shrink-0'>
@@ -531,13 +556,11 @@
     transform: translateY(-2px);
   }
 
-  /* Chapitre déjà lu */
   .chapter-btn.read {
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.45);
   }
 
-  /* Prochain chapitre à lire */
   .chapter-btn.current {
     border: 1px solid var(--primary-color, #3db4f2) !important;
     background: rgba(61, 180, 242, 0.15);
