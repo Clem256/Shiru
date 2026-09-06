@@ -1,5 +1,5 @@
 <script>
-  import { Home, Search, Users, Download, CalendarSearch, Settings, Bell, BellDot, ListVideo, LogIn, CloudDownload, Heart, TvMinimalPlay, History } from 'lucide-svelte'
+  import { Home, Search, Users, Download, CalendarSearch, Settings, Bell, BellDot, ListVideo, LogIn, CloudDownload, Heart, TvMinimalPlay, History, Tv, BookOpen } from 'lucide-svelte'
   import NavLink from '@/components/navigation/components/NavLink.svelte'
   import { page, modal, playPage } from '@/modules/navigation.js'
   import { unreadCount } from '@/modules/notification/manager.js'
@@ -76,18 +76,26 @@
   <NavLink click={getClick(item)} page={page.SEARCH} text='Search' class={$$restProps.class} {drawer} {sidebar}>
     <Search class={iconCss} style='height: {size}; width: {size};' strokeWidth='2.5' />
   </NavLink>
+{:else if item === page.MY_ANIME}
+  <NavLink click={getClick(item)} page={page.MY_ANIME} text={drawer || expandableSidebar ? 'My Anime' : 'Anime'} class={$$restProps.class} {drawer} {sidebar}>
+    <Tv class={iconCss} style='height: {size}; width: {size};' strokeWidth='2.5' />
+  </NavLink>
+{:else if item === page.MY_MANGA}
+  <NavLink click={getClick(item)} page={page.MY_MANGA} text={drawer || expandableSidebar ? 'My Manga' : 'Manga'} class={$$restProps.class} {drawer} {sidebar}>
+    <BookOpen class={iconCss} style='height: {size}; width: {size};' strokeWidth='2.5' />
+  </NavLink>
 {:else if item === page.SCHEDULE}
   <NavLink click={getClick(item)} page={page.SCHEDULE} text='Schedule' class={$$restProps.class} {drawer} {sidebar}>
     <CalendarSearch class={iconCss} style='height: {size}; width: {size};' strokeWidth='2.5' />
   </NavLink>
 {:else if item === modal.ANIME_DETAILS}
   <NavLink
-      click={getClick(item)}
-      altClick={getClick('ANIME_DETAILS_ALT')}
-      page={$playPage ? page.PLAYER : null}
-      modal={modal.ANIME_DETAILS}
-      text={$nowPlaying?.display ? `${drawer || expandableSidebar ? 'Last ' : ''}Watched` : `${drawer || expandableSidebar ? 'Now ' : ''}Playing`}
-      class={$$restProps.class} {drawer} {sidebar}>
+          click={getClick(item)}
+          altClick={getClick('ANIME_DETAILS_ALT')}
+          page={$playPage ? page.PLAYER : null}
+          modal={modal.ANIME_DETAILS}
+          text={$nowPlaying?.display ? `${drawer || expandableSidebar ? 'Last ' : ''}Watched` : `${drawer || expandableSidebar ? 'Now ' : ''}Playing`}
+          class={$$restProps.class} {drawer} {sidebar}>
     <svelte:component this={$playPage ? TvMinimalPlay : $nowPlaying?.display ? History : ListVideo} class={iconCss} style='height: {size}; width: {size};' strokeWidth='2.5' />
   </NavLink>
 {:else if item === page.WATCH_TOGETHER}

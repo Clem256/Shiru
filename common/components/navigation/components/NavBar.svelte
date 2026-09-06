@@ -29,8 +29,22 @@
    *
    * @type {Record<string, number>}
    */
-  const PRIORITY = { [page.HOME]: 1, [page.SEARCH]: 2, [page.SCHEDULE]: 3, [modal.ANIME_DETAILS]: 4, [modal.NOTIFICATIONS]: 5, [page.TORRENT_MANAGER]: 6, [page.WATCH_TOGETHER]: 7, UPDATE_DOWNLOADING: 8, UPDATE_READY: 9, DONATE: 10, [modal.PROFILE]: 11, [page.SETTINGS]: 12 }
-
+  const PRIORITY = {
+    [page.HOME]: 1,
+    [page.SEARCH]: 2,
+    [page.MY_ANIME]: 3,
+    [page.MY_MANGA]: 4,
+    [page.SCHEDULE]: 5,
+    [modal.ANIME_DETAILS]: 6,
+    [modal.NOTIFICATIONS]: 7,
+    [page.TORRENT_MANAGER]: 8,
+    [page.WATCH_TOGETHER]: 9,
+    UPDATE_DOWNLOADING: 10,
+    UPDATE_READY: 11,
+    DONATE: 12,
+    [modal.PROFILE]: 13,
+    [page.SETTINGS]: 14
+  }
   /** @type {number} */
   let navbarSize = 768
   /** @type {number} */
@@ -45,6 +59,8 @@
     const base = [
       page.HOME,
       page.SEARCH,
+      page.MY_ANIME,
+      page.MY_MANGA,
       page.SCHEDULE,
       ...($nowPlaying?.media || ($playPage && Object.keys($nowPlaying).length > 0)) ? [modal.ANIME_DETAILS] : [],
       ...($settings.w2g || COMMON.getPlatformInfo().development) ? [page.WATCH_TOGETHER] : [],
