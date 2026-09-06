@@ -22,6 +22,7 @@
    *
    * TODO: rewrite the MediaHandler, put less focus on "nowPlaying" and separately store verified (resolved) media.
    */
+  /** @type {import('simple-store-svelte').Writable<{ display?: boolean, [key: string]: any }>} */
   export const nowPlaying = writable({})
 
   export const files = writable([])
