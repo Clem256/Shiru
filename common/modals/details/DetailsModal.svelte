@@ -22,7 +22,7 @@
   import { modal } from '@/modules/navigation.js'
   import DOMPurify from 'dompurify'
   import { marked } from 'marked'
-  import { Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, X } from 'lucide-svelte'
+  import { Clapperboard, Users, Heart, Play, Timer, TrendingUp, Tv, Hash, ArrowDown01, ArrowUp10, X, BookOpen, Bookmark } from 'lucide-svelte'
 
   $: view = $modal[modal.ANIME_DETAILS]?.data
   function close () {
@@ -36,14 +36,22 @@
     if (media && (!staticMedia || staticMedia?.id !== media?.id)) staticMedia = media
     else if (!media && staticMedia) staticMedia = null
   }
-  $: episodeOrder = !!staticMedia
+
+  $: isManga = staticMedia?.type === 'MANGA' || ['MANGA', 'NOVEL', 'ONE_SHOT'].includes(staticMedia?.format)
+
+  $: episodeOrder = !staticMedia
   $: watched = media?.mediaListEntry?.status === 'COMPLETED'
   $: hasSpoiler = $settings.spoilerStatus.includes(media?.mediaListEntry?.status ?? 'NOTONLIST')
   $: userProgress =  ['CURRENT', 'REPEATING', 'PAUSED', 'DROPPED'].includes(media?.mediaListEntry?.status) && media?.mediaListEntry?.progress
   $: missingIds = staticMedia && []
   $: recommendations = staticMedia && anilistClient.recommendations({ id: staticMedia.id })
+
   $: searchIDS = staticMedia && (async () => {
-    const searchIDS = [...(staticMedia.relations?.edges?.filter(({ node }) => node.type === 'ANIME').map(({ node }) => node.id) || []), ...((await recommendations)?.data?.Media?.recommendations?.edges?.map(({ node }) => node.mediaRecommendation?.id) || [])]
+    const targetType = isManga ? 'MANGA' : 'ANIME'
+    const searchIDS = [
+      ...(staticMedia.relations?.edges?.filter(({ node }) => node.type === targetType).map(({ node }) => node.id) || []),
+      ...((await recommendations)?.data?.Media?.recommendations?.edges?.map(({ node }) => node.mediaRecommendation?.id) || [])
+    ]
     if (searchIDS.length === 0) {
       missingIds = searchIDS.filter(id => !mediaCache.value[id])
       return Promise.resolve([])
@@ -61,21 +69,32 @@
       }
     })
   })()
+
   $: staticMedia && ((container && container.scrollTo({ top: 0, behavior: 'smooth' })))
-  function getPlayButtonText (media) {
-    if (media?.mediaListEntry) {
-      const { status, progress } = media.mediaListEntry
-      if (progress) {
-        if (status === 'COMPLETED') {
-          return 'Rewatch Now'
-        } else {
-          return 'Continue Now'
-        }
+
+  function getActionText (media, mangaMode) {
+    const entry = media?.mediaListEntry
+    if (mangaMode) {
+      if (entry?.progress) {
+        return entry.status === 'COMPLETED' ? 'Reread Now' : 'Continue Reading'
       }
+      return 'Read Now'
+    }
+    if (entry?.progress) {
+      return entry.status === 'COMPLETED' ? 'Rewatch Now' : 'Continue Now'
     }
     return 'Watch Now'
   }
-  $: playButtonText = getPlayButtonText(media)
+  $: actionButtonText = getActionText(media, isManga)
+
+  function handleMainAction () {
+    if (isManga) {
+      COMMON.openURI(`https://anilist.co/manga/${staticMedia.id}`)
+    } else {
+      play(media)
+    }
+  }
+
   function toggleFavourite () {
     media.isFavourite = anilistClient.favourite({ id: media.id, isFavourite: !media.isFavourite })
   }
@@ -83,37 +102,14 @@
   function sanitize(body) {
     if (!body) return ''
     const cleanBody = body.trim()
-      .replace(/\.\.+(?=\s*$)/gm, '.') // Remove excessive trailing "..."
-      .replace(/\n/g, '<br>')  // Convert all \n to <br>
-      .replace(/(<br\s*\/?>){2,}/gi, '<br><br>') // Then collapse 2+ <br> to exactly 2
-      .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '') // Remove any prepended or appended <br>.
-    marked.setOptions({
-      pedantic: false,
-      breaks: true,
-      gfm: true
-    })
+            .replace(/\.\.+(?=\s*$)/gm, '.')
+            .replace(/\n/g, '<br>')
+            .replace(/(<br\s*\/?>){2,}/gi, '<br><br>')
+            .replace(/^(<br\s*\/?>\s*)+|(<br\s*\/?>\s*)+$/gi, '')
+    marked.setOptions({ pedantic: false, breaks: true, gfm: true })
     return DOMPurify.sanitize(marked.parse(cleanBody).trim(), {
-      ALLOWED_TAGS: [
-        'p', 'br', 'span', 'div',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark',
-        'ul', 'ol', 'li',
-        'blockquote',
-        'code', 'pre',
-        'a',
-        'img',
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-        'hr',
-        'details', 'summary',
-        'input'
-      ],
-      ALLOWED_ATTR: [
-        'href', 'target', 'rel', 'title',
-        'src', 'alt', 'width', 'height',
-        'class', 'id',
-        'align',
-        'type', 'checked', 'disabled'
-      ]
+      ALLOWED_TAGS: ['p', 'br', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins', 'mark', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'hr', 'details', 'summary', 'input'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'title', 'src', 'alt', 'width', 'height', 'class', 'id', 'align', 'type', 'checked', 'disabled']
     })
   }
 
@@ -154,15 +150,16 @@
   <div bind:this={container} class='overflow-y-auto position-relative'>
     <SmartImage class='w-full cover-img anime-details position-absolute' images={[
       staticMedia.bannerImage,
-      ...(staticMedia.trailer?.id ? [
+      ...(!isManga && staticMedia.trailer?.id ? [
         `https://i.ytimg.com/vi/${staticMedia.trailer.id}/maxresdefault.jpg`,
         `https://i.ytimg.com/vi/${staticMedia.trailer.id}/hqdefault.jpg`] : []),
-        () => getKitsuMappings(staticMedia).then(metadata =>
-          [metadata?.included?.[0]?.attributes?.coverImage?.original,
-           metadata?.included?.[0]?.attributes?.coverImage?.large,
-           metadata?.included?.[0]?.attributes?.coverImage?.small,
-           metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
-        () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)]}/>
+      ...(!isManga ? [
+        () => getKitsuMappings(staticMedia).then(metadata => [
+          metadata?.included?.[0]?.attributes?.coverImage?.original,
+          metadata?.included?.[0]?.attributes?.coverImage?.large,
+          metadata?.included?.[0]?.attributes?.coverImage?.small,
+          metadata?.included?.[0]?.attributes?.coverImage?.tiny]),
+        () => getEpisodeMetadataForMedia(staticMedia).then(metadata => metadata?.[1]?.image)] : [])]}/>
     <div class='row px-20'>
       <div class='col-lg-7 col-12 pb-10'>
         <div use:syncColumnHeights>
@@ -170,7 +167,9 @@
             <div class='cover d-flex flex-row align-items-sm-end align-items-center justify-content-center mw-full mb-sm-0 mb-20 w-full' style='max-height: 50vh;'>
               <div class='position-relative h-full'>
                 <SmartImage class='rounded cover-img overflow-hidden h-full w-full' color={staticMedia?.coverImage?.color || 'var(--tertiary-color)'} images={[staticMedia.coverImage?.extraLarge, staticMedia.coverImage?.medium, './no_image_cover.jpg']}/>
-                <AudioLabel {media} viewAnime={true} />
+                {#if !isManga}
+                  <AudioLabel {media} viewAnime={true} />
+                {/if}
               </div>
             </div>
             <div class='pl-sm-20 ml-sm-20'>
@@ -192,22 +191,39 @@
                     </span>
                   </div>
                 {/if}
-                {#if staticMedia.episodes !== 1}
-                  {@const maxEp = getMediaMaxEp(staticMedia)}
-                  <div class='d-flex flex-row mt-10'>
-                    <Clapperboard class='mx-10' size='2.2rem' />
-                    <span class='mr-20'>
-                      Episodes: {maxEp && maxEp !== 0 ? maxEp : '?'}
-                    </span>
-                  </div>
-                {:else if staticMedia.duration}
-                  <div class='d-flex flex-row mt-10'>
-                    <Timer class='mx-10' size='2.2rem' />
-                    <span class='mr-20'>
-                      Length: {staticMedia.duration + ' min'}
-                    </span>
-                  </div>
+
+                {#if isManga}
+                  {#if staticMedia.chapters}
+                    <div class='d-flex flex-row mt-10'>
+                      <BookOpen class='mx-10' size='2.2rem' />
+                      <span class='mr-20'>Chapters: {staticMedia.chapters}</span>
+                    </div>
+                  {/if}
+                  {#if staticMedia.volumes}
+                    <div class='d-flex flex-row mt-10'>
+                      <Bookmark class='mx-10' size='2.2rem' />
+                      <span class='mr-20'>Volumes: {staticMedia.volumes}</span>
+                    </div>
+                  {/if}
+                {:else}
+                  {#if staticMedia.episodes !== 1}
+                    {@const maxEp = getMediaMaxEp(staticMedia)}
+                    <div class='d-flex flex-row mt-10'>
+                      <Clapperboard class='mx-10' size='2.2rem' />
+                      <span class='mr-20'>
+                        Episodes: {maxEp && maxEp !== 0 ? maxEp : '?'}
+                      </span>
+                    </div>
+                  {:else if staticMedia.duration}
+                    <div class='d-flex flex-row mt-10'>
+                      <Timer class='mx-10' size='2.2rem' />
+                      <span class='mr-20'>
+                        Length: {staticMedia.duration + ' min'}
+                      </span>
+                    </div>
+                  {/if}
                 {/if}
+
                 {#if staticMedia.averageScore && staticMedia.stats?.scoreDistribution && (!hasSpoiler || !['moderate', 'strict', 'hermit'].includes($settings.spoilers))}
                   <div class='d-flex flex-row mt-10'>
                     <Users class='mx-10' size='2.2rem' />
@@ -217,14 +233,19 @@
                   </div>
                 {/if}
               </div>
+
               <div class='d-flex flex-row flex-wrap play'>
-                <button class='btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20' use:click={() => play(media)} disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
-                  <Play class='mr-10' fill='currentColor' size='1.6rem' />
-                  {playButtonText}
+                <button class='btn btn-lg btn-secondary w-250 text-dark font-weight-bold shadow-none border-0 d-flex align-items-center justify-content-center mr-20 mt-20' use:click={handleMainAction} disabled={staticMedia.status === 'NOT_YET_RELEASED'}>
+                  {#if isManga}
+                    <BookOpen class='mr-10' size='1.6rem' />
+                  {:else}
+                    <Play class='mr-10' fill='currentColor' size='1.6rem' />
+                  {/if}
+                  {actionButtonText}
                 </button>
                 <div class='mt-20 d-flex'>
                   {#if Helper.isAuthorized()}
-                    <Scoring class='mr-10 '{media} viewAnime={true} />
+                    <Scoring class='mr-10 '{media} viewAnime={!isManga} />
                   {/if}
                   {#if Helper.isAniAuth()}
                     <button class='btn bg-dark-light btn-lg btn-square d-flex align-items-center justify-content-center shadow-none border-0 mr-10' data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title={media.isFavourite ? 'Unfavourite' : 'Favourite'} use:click={toggleFavourite} disabled={!Helper.isAniAuth()}>
@@ -233,11 +254,13 @@
                       </div>
                     </button>
                   {/if}
-                  <TrailerModal {staticMedia} />
-                  <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://anilist.co/anime/${staticMedia.id}`, 'share URL')} on:contextmenu|preventDefault={() => COMMON.openURI(`https://anilist.co/anime/${staticMedia.id}`)}>
+                  {#if !isManga}
+                    <TrailerModal {staticMedia} />
+                  {/if}
+                  <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0 mr-10' class:d-flex={staticMedia.id} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://anilist.co/${isManga ? 'manga' : 'anime'}/${staticMedia.id}`, 'share URL')} on:contextmenu|preventDefault={() => COMMON.openURI(`https://anilist.co/${isManga ? 'manga' : 'anime'}/${staticMedia.id}`)}>
                     <img class='rounded w-20' src='./anilist_icon.png' alt='Anilist'>
                   </button>
-                  <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://myanimelist.net/anime/${staticMedia.idMal}`, 'share URL')} on:contextmenu|preventDefault={() => COMMON.openURI(`https://myanimelist.net/anime/${staticMedia.idMal}`)}>
+                  <button class='btn bg-dark-light btn-lg btn-square d-none align-items-center justify-content-center shadow-none border-0' class:d-flex={staticMedia.idMal} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Share to Clipboard' use:click={() => copyToClipboard(`https://myanimelist.net/${isManga ? 'manga' : 'anime'}/${staticMedia.idMal}`, 'share URL')} on:contextmenu|preventDefault={() => COMMON.openURI(`https://myanimelist.net/${isManga ? 'manga' : 'anime'}/${staticMedia.idMal}`)}>
                     <img class='rounded w-20' src='./myanimelist_icon.png' alt='MyAnimeList'>
                   </button>
                 </div>
@@ -270,19 +293,24 @@
               {@html sanitize(staticMedia.description)}
             </div>
           {/if}
-          {#if episodeList?.length}
-            <div class='w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer' aria-hidden='true' use:click={() => { episodeOrder = !episodeOrder }}>
-              <hr class='w-full' />
-              <div class='position-absolute font-size-18 font-weight-semi-bold px-20 text-white' style='left: 50%; transform: translateX(-50%);'>Episodes</div>
-              <hr class='w-full' />
-              <div class='ml-auto pl-20 font-size-12 more text-muted text-nowrap pr-20' use:click={() => { episodeOrder = !episodeOrder }}>Reverse</div>
+
+          <!-- Vue Mobile : épisodes uniquement si c'est un anime -->
+          {#if !isManga}
+            {#if episodeList?.length}
+              <div class='w-full d-flex d-lg-none flex-row align-items-center pt-20 mt-10 pointer' aria-hidden='true' use:click={() => { episodeOrder = !episodeOrder }}>
+                <hr class='w-full' />
+                <div class='position-absolute font-size-18 font-weight-semi-bold px-20 text-white' style='left: 50%; transform: translateX(-50%);'>Episodes</div>
+                <hr class='w-full' />
+                <div class='ml-auto pl-20 font-size-12 more text-muted text-nowrap pr-20' use:click={() => { episodeOrder = !episodeOrder }}>Reverse</div>
+              </div>
+            {/if}
+            <div class='col-lg-5 col-12 d-lg-none flex-column mt-20'>
+              <EpisodeList bind:episodeList={episodeList} mobileList={true} media={staticMedia} {episodeOrder} {userProgress} {watched} {hasSpoiler} episodeCount={getMediaMaxEp(media)} {play} class='h-600' />
             </div>
           {/if}
-          <div class='col-lg-5 col-12 d-lg-none flex-column mt-20'>
-            <EpisodeList bind:episodeList={episodeList} mobileList={true} media={staticMedia} {episodeOrder} {userProgress} {watched} {hasSpoiler} episodeCount={getMediaMaxEp(media)} {play} class='h-600' />
-          </div>
+
           <div class='d-lg-block'>
-            <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === 'ANIME' && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title='Relations'>
+            <ToggleList list={ staticMedia.relations?.edges?.filter(({ node, relationType }) => relationType !== 'CHARACTER' && node.type === (isManga ? 'MANGA' : 'ANIME') && node.format !== 'MUSIC' && !(settings.value.adult === 'none' && node.isAdult) && !(settings.value.adult !== 'hentai' && node.genres?.includes('Hentai')) && !missingIds.includes(node.id)).sort((a, b) => (a.node.seasonYear || Infinity) - (b.node.seasonYear || Infinity)) } promise={searchIDS} let:item let:promise title='Relations'>
               {#await promise}
                 <div class='small-card'>
                   <SmallCardSk />
@@ -316,11 +344,131 @@
           </div>
         </div>
       </div>
+
       <div class='col-lg-5 col-12 d-none d-lg-flex flex-column pl-lg-20' bind:this={rightColumn}>
-        <button class='btn btn-square rounded-circle w-40 h-40 order pointer z-30 bg-dark-very-light position-absolute d-flex align-items-center justify-content-center text-white' class:d-none={!episodeList?.length} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Reverse Episodes' use:click={()=> {episodeOrder = !episodeOrder}}>
-          <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='2rem' />
-        </button>
-        <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} {userProgress} {watched} {hasSpoiler} episodeCount={getMediaMaxEp(media)} {play} />
+        {#if isManga}
+          {@const knownChapters = staticMedia.chapters || 0}
+          {@const currentProgress = media?.mediaListEntry?.progress || 0}
+          {@const displayCount = knownChapters > 0 ? knownChapters : Math.max(currentProgress + 10, 30)}
+
+          <div class='p-20 bg-dark-light rounded h-full d-flex flex-column' style='min-height: 0; max-height: 100%;'>
+            <div class='d-flex align-items-center justify-content-between mb-15 flex-shrink-0'>
+              <div class='d-flex align-items-center'>
+                <BookOpen class='mr-10 text-primary' size='2rem' />
+                <h3 class='font-size-18 font-weight-bold text-white m-0'>Chapters</h3>
+              </div>
+              <div class='d-flex align-items-center' style='gap: 0.8rem;'>
+        <span class='text-muted font-size-14'>
+          Read: <b class='text-white'>{currentProgress}</b> / {knownChapters || '?'}
+        </span>
+                <button
+                        type='button'
+                        class='btn btn-sm btn-primary px-10 py-0 font-weight-bold'
+                        title='Quick +1 chapter'
+                        use:click={async () => {
+            const nextChap = currentProgress + 1
+            const isFinished = knownChapters > 0 && nextChap >= knownChapters
+            const nextStatus = isFinished ? 'COMPLETED' : 'CURRENT'
+
+            if (Helper.isAniAuth()) {
+              await anilistClient.entry({
+                mediaId: staticMedia.id,
+                progress: nextChap,
+                status: nextStatus
+              })
+            } else if (Helper.isMalAuth()) {
+              await Helper.getClient().entry({
+                id: staticMedia.id,
+                num_chapters_read: nextChap,
+                status: isFinished ? 'completed' : 'reading'
+              })
+            }
+
+            mediaCache.update(cache => {
+              const current = cache[staticMedia.id] || staticMedia
+              return {
+                ...cache,
+                [staticMedia.id]: {
+                  ...current,
+                  mediaListEntry: {
+                    ...(current.mediaListEntry || {}),
+                    progress: nextChap,
+                    status: nextStatus
+                  }
+                }
+              }
+            })
+          }}>
+                  +1
+                </button>
+              </div>
+            </div>
+
+            <div class='chapters-scroll-area flex-grow-1 overflow-y-auto pr-5'>
+              <div class='chapters-grid'>
+                {#each Array.from({ length: displayCount }, (_, i) => i + 1) as chapNum}
+                  {@const isRead = chapNum <= currentProgress}
+                  <button
+                          type='button'
+                          class='btn chapter-btn d-flex flex-column align-items-center justify-content-center border-0'
+                          class:read={isRead}
+                          class:current={chapNum === currentProgress + 1}
+                          use:click={async () => {
+              const isFinished = knownChapters > 0 && chapNum === knownChapters
+              const nextStatus = isFinished ? 'COMPLETED' : 'CURRENT'
+
+              if (Helper.isAniAuth()) {
+                await anilistClient.entry({
+                  mediaId: staticMedia.id,
+                  progress: chapNum,
+                  status: nextStatus
+                })
+              } else if (Helper.isMalAuth()) {
+                await Helper.getClient().entry({
+                  id: staticMedia.id,
+                  num_chapters_read: chapNum,
+                  status: isFinished ? 'completed' : 'reading'
+                })
+              }
+
+              mediaCache.update(cache => {
+                const current = cache[staticMedia.id] || staticMedia
+                return {
+                  ...cache,
+                  [staticMedia.id]: {
+                    ...current,
+                    mediaListEntry: {
+                      ...(current.mediaListEntry || {}),
+                      progress: chapNum,
+                      status: nextStatus
+                    }
+                  }
+                }
+              })
+            }}>
+                    <span class='chap-label'>CH</span>
+                    <span class='chap-number'>{chapNum}</span>
+                  </button>
+                {/each}
+              </div>
+            </div>
+
+            <div class='pt-15 mt-10 border-top flex-shrink-0'>
+              <button
+                      type='button'
+                      class='btn btn-primary w-full py-10 font-weight-bold d-flex align-items-center justify-content-center'
+                      style='gap: 0.5rem;'
+                      use:click={() => COMMON.openURI(`https://anilist.co/manga/${staticMedia.id}`)}>
+                <span>Open on AniList</span>
+              </button>
+            </div>
+          </div>
+        {:else}
+          <button class='btn btn-square rounded-circle w-40 h-40 order pointer z-30 bg-dark-very-light position-absolute d-flex align-items-center justify-content-center text-white' class:d-none={!episodeList?.length} data-toggle='tooltip' data-placement='top' data-target-breakpoint='md' data-title='Reverse Episodes' use:click={()=> {episodeOrder = !episodeOrder}}>
+            <svelte:component this={episodeOrder ? ArrowDown01 : ArrowUp10} size='2rem' />
+          </button>
+          <EpisodeList bind:episodeLoad={episodeLoad} media={staticMedia} {episodeOrder} {userProgress} {watched} {hasSpoiler} episodeCount={getMediaMaxEp(media)} {play} />
+        {/if}
       </div>
     </div>
   </div>
@@ -357,5 +505,54 @@
   }
   .cover {
     aspect-ratio: 7/10;
+  }
+  .chapters-scroll-area {
+    max-height: calc(100vh - 320px);
+  }
+
+  .chapters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+    gap: 8px;
+  }
+
+  .chapter-btn {
+    background: var(--dark-very-light-color, #1f1f23);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 4px;
+    transition: all 0.15s ease;
+    min-height: 52px;
+  }
+
+  .chapter-btn:hover {
+    background: var(--primary-color, #3db4f2);
+    color: #fff;
+    transform: translateY(-2px);
+  }
+
+  /* Chapitre déjà lu */
+  .chapter-btn.read {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  /* Prochain chapitre à lire */
+  .chapter-btn.current {
+    border: 1px solid var(--primary-color, #3db4f2) !important;
+    background: rgba(61, 180, 242, 0.15);
+    color: var(--primary-color, #3db4f2);
+  }
+
+  .chap-label {
+    font-size: 0.9rem;
+    opacity: 0.6;
+    line-height: 1;
+  }
+
+  .chap-number {
+    font-size: 1.4rem;
+    font-weight: bold;
+    line-height: 1.2;
   }
 </style>
